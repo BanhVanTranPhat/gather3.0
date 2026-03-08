@@ -1,13 +1,17 @@
-import { User } from '@supabase/supabase-js'
+export interface AppUser {
+    id: string
+    email?: string
+    user_metadata?: { email?: string; displayName?: string }
+}
 
 class Users {
-    private users: { [key: string]: User } = {}
+    private users: { [key: string]: AppUser } = {}
 
-    addUser(id: string, user: User) {
+    addUser(id: string, user: AppUser) {
         this.users[id] = user
     }
 
-    getUser(id: string): User | undefined {
+    getUser(id: string): AppUser | undefined {
         return this.users[id]
     }
 

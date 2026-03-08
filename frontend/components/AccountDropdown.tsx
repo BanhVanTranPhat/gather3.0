@@ -2,7 +2,7 @@
 import React, { Fragment } from 'react'
 import { useModal } from '@/app/hooks/useModal'
 import { Dialog, Transition } from '@headlessui/react'
-import { createClient } from '@/utils/supabase/client'
+import { createClient } from '@/utils/auth/client'
 import { useRouter } from 'next/navigation'
 
 const AccountDropdown:React.FC = () => {
@@ -12,8 +12,8 @@ const AccountDropdown:React.FC = () => {
     async function handleSignOut() {
         setModal('None')
 
-        const supabase = createClient()
-        await supabase.auth.signOut()
+        const auth = createClient()
+        await auth.auth.signOut()
 
         router.push('/signin')
     }

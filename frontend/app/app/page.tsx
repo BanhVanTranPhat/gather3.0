@@ -1,22 +1,25 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/auth/server'
 import { redirect } from 'next/navigation'
 import { Navbar } from '@/components/Navbar/Navbar'
 import RealmsMenu from './RealmsMenu/RealmsMenu'
-import { getVisitedRealms } from '@/utils/supabase/getVisitedRealms'
+import { getVisitedRealms } from '@/utils/backend/getVisitedRealms'
 
 export default async function App() {
 
-    const supabase = createClient()
+    const auth = await createClient()
+    if (!auth?.auth) {
+        return redirect('/signin')
+    }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user } } = await auth.auth.getUser()
+    const { data: { session } } = await auth.auth.getSession()
 
     if (!user || !session) {
         return redirect('/signin')
     }
 
     const realms: any = []
-    const { data: ownedRealms, error } = await supabase.from('realms').select('id, name, share_id').eq('owner_id', user.id)
+    const { data: ownedRealms, error } = await auth.from('realms').select('id, name, share_id')
     if (ownedRealms) {
         realms.push(...ownedRealms)
     }

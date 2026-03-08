@@ -4,7 +4,10 @@ import http from 'http'
 import { Server as SocketIOServer } from 'socket.io'
 import { sockets } from './sockets/sockets'
 import routes from './routes/routes'
-import { supabase } from './supabase'
+import realmsRouter from './routes/realms'
+import profilesRouter from './routes/profiles'
+import authRouter from './routes/auth'
+import { connectDb } from './db'
 import { sessionManager } from './session'
 
 require('dotenv').config()
@@ -13,10 +16,11 @@ const app = express()
 const server = http.createServer(app)
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL
+  origin: process.env.FRONTEND_URL || true,
+  credentials: true,
 }))
+app.use(express.json({ limit: '50mb' }))
 
-// Initialize Socket.IO server
 const io = new SocketIOServer(server, {
   cors: {
     origin: process.env.FRONTEND_URL
@@ -24,39 +28,20 @@ const io = new SocketIOServer(server, {
 })
 
 app.use(routes())
-
+app.use(authRouter)
+app.use(realmsRouter)
+app.use(profilesRouter)
 sockets(io)
 
-function onRealmUpdate(payload: any) {
-    const id = payload.new.id
-    let refresh = false
-    if (JSON.stringify(payload.new.map_data) !== JSON.stringify(payload.old.map_data)) {
-        refresh = true
-    }
-    if (payload.new.share_id !== payload.old.share_id) {
-        refresh = true
-    }
-    if (payload.new.only_owner) {
-        refresh = true
-    }
-    if (refresh) {
-        sessionManager.terminateSession(id, "This realm has been changed by the owner.")
-    }
-}
+const PORT = process.env.PORT || 4000
 
-function onRealmDelete(payload: any) {
-    sessionManager.terminateSession(payload.old.id, "This realm is no longer available.")
-}
-
-supabase
-    .channel('realms')
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'realms' }, onRealmUpdate)
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'realms' }, onRealmDelete)
-    .subscribe()
-
-const PORT = process.env.PORT || 3001
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`)
+connectDb().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}.`)
+  })
+}).catch((err) => {
+  console.error('MongoDB connection failed:', err)
+  process.exit(1)
 })
 
 

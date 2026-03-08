@@ -6,12 +6,12 @@ import BasicButton from '@/components/BasicButton'
 import signal from '@/utils/signal'
 import { useModal } from '@/app/hooks/useModal'
 import { RealmData } from '@/utils/pixi/types'
-import { createClient } from '@/utils/supabase/client'
+import { createClient } from '@/utils/auth/client'
 import { useParams } from 'next/navigation'
 import { toast } from 'react-toastify'
 import revalidate from '@/utils/revalidate'
 import { FloppyDisk } from '@phosphor-icons/react'
-import { saveRealm } from '@/utils/supabase/saveRealm'
+import { saveRealm } from '@/utils/backend/saveRealm'
 
 type TopBarProps = {
     
@@ -24,7 +24,7 @@ const TopBar:React.FC<TopBarProps> = () => {
 
     const [barWidth, setBarWidth] = useState<number>(0)
 
-    const supabase = createClient()
+    const auth = createClient()
 
     function beginSave() {
         signal.emit('beginSave')
@@ -34,7 +34,7 @@ const TopBar:React.FC<TopBarProps> = () => {
 
     useEffect(() => {
         const save = async (realmData: RealmData) => {
-            const { data: { session } } = await supabase.auth.getSession()
+            const { data: { session } } = await auth.auth.getSession()
             if (!session) return
 
             const { error } = await saveRealm(session.access_token, realmData, id as string)

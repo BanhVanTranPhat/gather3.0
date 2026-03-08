@@ -1,26 +1,26 @@
 import React from 'react'
 import NotFound from '@/app/not-found'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/auth/server'
 import { redirect } from 'next/navigation'
-import { getPlayRealmData } from '@/utils/supabase/getPlayRealmData'
+import { getPlayRealmData } from '@/utils/backend/getPlayRealmData'
 import PlayClient from '../PlayClient'
-import { updateVisitedRealms } from '@/utils/supabase/updateVisitedRealms'
+import { updateVisitedRealms } from '@/utils/backend/updateVisitedRealms'
 import { formatEmailToName } from '@/utils/formatEmailToName'
 
 export default async function Play({ params, searchParams }: { params: { id: string }, searchParams: { shareId: string } }) {
 
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    const { data: { user } } = await supabase.auth.getUser()
+    const auth = await createClient()
+    const { data: { session } } = await auth.auth.getSession()
+    const { data: { user } } = await auth.auth.getUser()
 
     if (!session || !user) {
         return redirect('/signin')
     }
-    const { data, error } = !searchParams.shareId ? await supabase.from('realms').select('map_data, owner_id, name').eq('id', params.id).single() : await getPlayRealmData(session.access_token, searchParams.shareId)
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('skin').eq('id', user.id).single()
+    const { data, error } = !searchParams.shareId ? await auth.from('realms').select('map_data, owner_id, name').eq('id', params.id).single() : await getPlayRealmData(session.access_token, searchParams.shareId)
+    const { data: profile, error: profileError } = await auth.from('profiles').select('skin').eq('id', user.id).single()
     // Show not found page if no data is returned
     if (!data || !profile) {
-        const message = error?.message || profileError?.message
+        const message = (error as { message?: string } | null)?.message || (profileError as { message?: string } | null)?.message || ''
 
         return <NotFound specialMessage={message}/>
     }

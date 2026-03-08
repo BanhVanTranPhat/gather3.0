@@ -5,7 +5,7 @@ import * as PIXI from 'pixi.js'
 import { server } from '../backend/server'
 import { defaultSkin } from './Player/skins'
 import signal from '../signal'
-import { createClient } from '../supabase/client'
+import { createClient } from '../auth/client'
 import { gsap } from 'gsap'
 
 export class PlayApp extends App {
@@ -427,8 +427,8 @@ export class PlayApp extends App {
     }
 
     private displayInitialChatMessage = async () => {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
+        const auth = createClient()
+        const { data: { session } } = await auth.auth.getSession()
         if (!session) return
         let channelName = ''
 

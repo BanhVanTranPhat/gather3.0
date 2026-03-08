@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { GetPlayersInRoom, GetServerName, IsOwnerOfServer, UserIsInGuild, GetChannelName, GetPlayerCounts } from './route-types'
-import { supabase } from '../supabase'
+import { verifyToken } from '../auth'
 import { z } from 'zod'
 import { sessionManager } from '../session'
 
@@ -19,13 +19,12 @@ export default function routes(): Router {
             return res.status(400).json({ message: 'Invalid parameters' })
         }
 
-        const { data: user, error: error } = await supabase.auth.getUser(access_token)
-
-        if (error) {
+        const user = verifyToken(access_token)
+        if (!user) {
             return res.status(401).json({ message: 'Invalid access token' })
         }
 
-        const session = sessionManager.getPlayerSession(user.user.id)
+        const session = sessionManager.getPlayerSession(user.id)
         if (!session) {
             return res.status(400).json({ message: 'User not in a realm.' })
         }
@@ -53,9 +52,8 @@ export default function routes(): Router {
             return res.status(400).json({ message: 'Too many server IDs' })
         }
 
-        const { data: user, error: error } = await supabase.auth.getUser(access_token)
-
-        if (error) {
+        const user = verifyToken(access_token)
+        if (!user) {
             return res.status(401).json({ message: 'Invalid access token' })
         }
 

@@ -1,5 +1,5 @@
 import io, { Socket } from 'socket.io-client'
-import { createClient } from '../supabase/client'
+import { createClient } from '../auth/client'
 import { request } from './requests'
 
 type ConnectionResponse = {
@@ -75,8 +75,8 @@ class Server {
     }
 
     public async getPlayersInRoom(roomIndex: number) {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
+        const auth = createClient()
+        const { data: { session } } = await auth.auth.getSession()
         if (!session) return { data: null, error: { message: 'No session provided' } }
 
         return request('/getPlayersInRoom', {

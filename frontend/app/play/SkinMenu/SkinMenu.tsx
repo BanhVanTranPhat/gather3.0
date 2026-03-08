@@ -6,7 +6,7 @@ import { ArrowFatLeft, ArrowFatRight } from '@phosphor-icons/react'
 import BasicLoadingButton from '@/components/BasicLoadingButton'
 import { skins, defaultSkin } from '@/utils/pixi/Player/skins'
 import signal from '@/utils/signal'
-import { createClient } from '@/utils/supabase/client'
+import { createClient } from '@/utils/auth/client'
 import revalidate from '@/utils/revalidate'
 import { toast } from 'react-toastify'
 
@@ -21,7 +21,7 @@ const SkinMenu:React.FC<SkinMenuProps> = () => {
     const [skinIndex, setSkinIndex] = useState<number>(skins.indexOf(defaultSkin))
     const [loading, setLoading] = useState(false)
 
-    const supabase = createClient()
+    const auth = createClient()
 
     function decrement() {
         setSkinIndex((prevIndex) => (prevIndex - 1 + skins.length) % skins.length)
@@ -45,11 +45,10 @@ const SkinMenu:React.FC<SkinMenuProps> = () => {
 
     async function switchSkins() {
         const newSkin = skins[skinIndex]
-        // update profile on supabase with different skin
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user } } = await auth.auth.getUser()
         if (!user) return
 
-        const { error } = await supabase
+        const { error } = await auth
                 .from('profiles')
                 .update({ skin: newSkin })
                 .eq('id', user.id)

@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import Dropdown from '@/components/Dropdown'
 import BasicButton from '@/components/BasicButton'
-import { createClient } from '@/utils/supabase/client'
+import { createClient } from '@/utils/auth/client'
 import { toast } from 'react-toastify'
 import revalidate from '@/utils/revalidate'
 import { useModal } from '../hooks/useModal'
@@ -26,7 +26,7 @@ const ManageChild:React.FC<ManageChildProps> = ({ realmId, startingShareId, star
     const [name, setName] = useState(startingName)
     const { setModal, setLoadingText } = useModal()
 
-    const supabase = createClient()
+    const auth = createClient()
 
     async function save() {
         if (name.trim() === '') {
@@ -37,7 +37,7 @@ const ManageChild:React.FC<ManageChildProps> = ({ realmId, startingShareId, star
         setModal('Loading')
         setLoadingText('Saving...')
 
-        const { error } = await supabase
+        const { error } = await auth
             .from('realms')
             .update({ 
                     only_owner: onlyOwner,
@@ -66,7 +66,7 @@ const ManageChild:React.FC<ManageChildProps> = ({ realmId, startingShareId, star
         setLoadingText('Generating new link...')
 
         const newShareId = uuidv4()
-        const { error } = await supabase
+        const { error } = await auth
             .from('realms')
             .update({ 
                 share_id: newShareId

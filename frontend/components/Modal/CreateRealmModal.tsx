@@ -4,7 +4,7 @@ import Modal from './Modal'
 import { useModal } from '@/app/hooks/useModal'
 import BasicButton from '../BasicButton'
 import BasicInput from '../BasicInput'
-import { createClient } from '@/utils/supabase/client'
+import { createClient } from '@/utils/auth/client'
 import { toast } from 'react-toastify'
 import { useRouter } from 'next/navigation' 
 import revalidate from '@/utils/revalidate'
@@ -22,8 +22,8 @@ const CreateRealmModal:React.FC = () => {
     const router = useRouter()
 
     async function createRealm() {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const auth = createClient()
+        const { data: { user } } = await auth.auth.getUser()
 
         if (!user) {
             return
@@ -41,7 +41,7 @@ const CreateRealmModal:React.FC = () => {
             realmData.map_data = defaultMap
         }
 
-        const { data, error } = await supabase.from('realms').insert(realmData).select()
+        const { data, error } = await auth.from('realms').insert(realmData).select()
 
         if (error) {
             toast.error(error?.message)

@@ -14,7 +14,7 @@ The app was designed to include the core features of Gather, including:
 - Multiplayer networking
 - Tile-based movement
 
-Built as a TypeScript web app primarily using Next.js, Supabase, Socket.io, TailwindCSS, Pixi.js, and Agora for video chat. 
+Built as a TypeScript web app primarily using Next.js, Express, MongoDB, Socket.io, TailwindCSS, and Pixi.js.
 
 ### How to install
 
@@ -33,22 +33,21 @@ cd backend
 npm install
 ```
 
-The project requires both Supabase and Agora - you'll need to create projects in both platforms.
-
 Create a .env file in the `backend` directory with the following variables:
 ```
 FRONTEND_URL=
-SUPABASE_URL=
-SERVICE_ROLE=
+MONGODB_URI=
+JWT_SECRET=
 ```
 
 Create a .env.local file in the `frontend` directory with the following variables:
 ```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_BASE_URL=
 NEXT_PUBLIC_BACKEND_URL=
-SERVICE_ROLE=
+```
+
+For video chat (optional), add:
+```
 NEXT_PUBLIC_AGORA_APP_ID=
 APP_CERTIFICATE=
 ```

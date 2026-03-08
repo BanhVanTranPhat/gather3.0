@@ -1,9 +1,10 @@
 'use server'
 import 'server-only'
 import { RealmData } from '../pixi/types'
-import { createClient } from '@supabase/supabase-js'
 import { RealmDataSchema } from '../pixi/zod'
 import { formatForComparison, removeExtraSpaces } from '../removeExtraSpaces'
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
 
 export async function saveRealm(access_token: string, realmData: RealmData, id: string) {
     const result = RealmDataSchema.safeParse(realmData)
@@ -19,15 +20,12 @@ export async function saveRealm(access_token: string, realmData: RealmData, id: 
         return { error: { message: 'A realm cannot have more than 50 rooms.' } }
     }
 
-    // return if any rooms in realm data have the same name
     const roomNames = new Set<string>()
     for (const room of realmData.rooms) {
         if (Object.keys(room.tilemap).length > 10_000) {
             return { error: { message: 'This room is too big to save!' } }
         }
-
         const roomName = formatForComparison(room.name)
-
         if (roomNames.has(roomName)) {
             return { error: { message: 'Room names must be unique.' } }
         }
@@ -38,29 +36,20 @@ export async function saveRealm(access_token: string, realmData: RealmData, id: 
             return { error: { message: 'Room names cannot be longer than 32 characters.' } }
         }
         roomNames.add(roomName)
-
         room.name = removeExtraSpaces(room.name, true)
     }
 
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SERVICE_ROLE!,
-    )
-
-    const { data: user, error: userError } = await supabase.auth.getUser(access_token)
-    if (!user || !user.user) {
-        return { error: userError }
+    const res = await fetch(`${BACKEND_URL}/realms/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({ map_data: realmData }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+        return { error: { message: (data as any).message || 'Save failed' } }
     }
-
-    const { error } = await supabase
-        .from('realms')
-        .update({ map_data: realmData })
-        .eq('id', id)
-        .eq('owner_id', user.user.id)
-
-    if (error) {
-        return { error }
-    }
-
     return { error: null }
 }

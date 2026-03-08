@@ -1,7 +1,8 @@
 import { Server } from 'socket.io'
 import { JoinRealm, Disconnect, OnEventCallback, MovePlayer, Teleport, ChangedSkin, NewMessage } from './socket-types'
 import { z } from 'zod'
-import { supabase } from '../supabase'
+import { verifyToken } from '../auth'
+import { getRealmById, getProfileById } from '../realmService'
 import { users } from '../Users'
 import { sessionManager } from '../session'
 import { removeExtraSpaces } from '../utils'
@@ -17,17 +18,13 @@ function protectConnection(io: Server) {
         if (!access_token || !uid) {
             const error = new Error("Invalid access token or uid.")
             return next(error)
-        } else {
-            const { data: user, error: error } = await supabase.auth.getUser(access_token)
-            if (error) {
-                return next(new Error("Invalid access token."))
-            }
-            if (!user || user.user.id !== uid) {
-                return next(new Error("Invalid uid."))
-            }
-            users.addUser(uid, user.user)
-            next()
         }
+        const user = verifyToken(access_token)
+        if (!user || user.id !== uid) {
+            return next(new Error("Invalid access token or uid."))
+        }
+        users.addUser(uid, user)
+        next()
     })
 }
 
@@ -97,21 +94,21 @@ export function sockets(io: Server) {
                 } 
             }
 
-            const { data, error } = await supabase.from('realms').select('owner_id, share_id, map_data, only_owner').eq('id', realmData.realmId).single()
-
-            if (error || !data) {
+            const realm = await getRealmById(realmData.realmId)
+            if (!realm) {
                 return rejectJoin('Space not found.')
             }
-            const { data: profile, error: profileError } = await supabase.from('profiles').select('skin').eq('id', uid).single()
-            if (profileError) {
+            const profile = await getProfileById(uid)
+            if (!profile) {
                 return rejectJoin('Failed to get profile.')
             }
 
-            const realm = data
+            const data = realm
 
             const join = async () => {
+                const mapData = data.map_data != null ? data.map_data as any : {}
                 if (!sessionManager.getSession(realmData.realmId)) {
-                    sessionManager.createSession(realmData.realmId, data.map_data)
+                    sessionManager.createSession(realmData.realmId, mapData)
                 }
 
                 const currentSession = sessionManager.getPlayerSession(uid)
@@ -120,8 +117,9 @@ export function sockets(io: Server) {
                 }
 
                 const user = users.getUser(uid)!
-                const username = formatEmailToName(user.user_metadata.email)
-                sessionManager.addPlayerToSession(socket.id, realmData.realmId, uid, username, profile.skin)
+                const email = user.user_metadata?.email ?? user.email ?? ''
+                const username = formatEmailToName(email)
+                sessionManager.addPlayerToSession(socket.id, realmData.realmId, uid, username, profile.skin ?? '')
                 const newSession = sessionManager.getPlayerSession(uid)
                 const player = newSession.getPlayer(uid)   
 
@@ -131,15 +129,15 @@ export function sockets(io: Server) {
                 joiningInProgress.delete(uid)
             }
 
-            if (realm.owner_id === socket.handshake.query.uid) {
+            if (data.owner_id === socket.handshake.query.uid) {
                 return join()
             }
 
-            if (realm.only_owner) {
+            if (data.only_owner) {
                 return rejectJoin('This realm is private right now. Come back later!')
             }
 
-            if (realm.share_id === realmData.shareId) {
+            if (data.share_id === realmData.shareId) {
                 return join()
             } else {
                 return rejectJoin('The share link has been changed.')

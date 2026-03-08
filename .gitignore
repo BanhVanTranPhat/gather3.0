@@ -17,6 +17,7 @@ frontend/build
 # misc
 .DS_Store
 *.pem
+*.swp
 
 # debug
 npm-debug.log*

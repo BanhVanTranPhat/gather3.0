@@ -9,8 +9,6 @@
     "@headlessui/react": "^1.7.19",
     "@heroicons/react": "^2.1.4",
     "@phosphor-icons/react": "^2.1.5",
-    "@supabase/ssr": "latest",
-    "@supabase/supabase-js": "latest",
     "agora-rtc-react": "^2.3.0",
     "agora-rtc-sdk-ng": "^4.22.1",
     "agora-token": "^2.0.3",
@@ -37,5 +35,6 @@
     "@types/react-dom": "18.2.18",
     "@types/uuid": "^9.0.8",
     "encoding": "^0.1.13"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
