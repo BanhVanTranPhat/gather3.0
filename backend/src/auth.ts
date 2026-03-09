@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-12345'
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET environment variable is required')
+const JWT_SECRET: string = process.env.JWT_SECRET
 
 export interface JwtPayload {
   userId: string
@@ -12,7 +13,7 @@ export interface JwtPayload {
 /** Verify JWT (giống Gather). */
 export function verifyToken(accessToken: string): { id: string; user_metadata: { email?: string; displayName?: string }; email?: string } | null {
   try {
-    const decoded = jwt.verify(accessToken, JWT_SECRET) as JwtPayload
+    const decoded = jwt.verify(accessToken, JWT_SECRET) as unknown as JwtPayload
     const userId = (decoded as any).userId || (decoded as any).id || (decoded as any).sub
     if (!userId) return null
     return {

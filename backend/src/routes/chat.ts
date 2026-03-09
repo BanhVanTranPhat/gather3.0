@@ -80,6 +80,13 @@ router.get('/chat/messages/:channelId', async (req: Request, res: Response) => {
   if (!user) return res.status(401).json({ message: 'Unauthorized' })
 
   const { channelId } = req.params
+
+  const channel = await ChatChannel.findById(channelId).lean()
+  if (!channel) return res.status(404).json({ message: 'Channel not found' })
+  if (channel.type === 'dm' && !channel.members.includes(user.id)) {
+    return res.status(403).json({ message: 'Not a member of this channel' })
+  }
+
   const page = Math.max(1, parseInt(req.query.page as string) || 1)
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50))
   const skip = (page - 1) * limit

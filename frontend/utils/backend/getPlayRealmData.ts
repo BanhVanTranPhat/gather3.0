@@ -1,7 +1,7 @@
 'use server'
 import 'server-only'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
 
 export async function getPlayRealmData(accessToken: string, shareId: string) {
     const userRes = await fetch(`${BACKEND_URL}/auth/me`, {

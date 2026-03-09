@@ -4,7 +4,7 @@ import { RealmData } from '../pixi/types'
 import { RealmDataSchema } from '../pixi/zod'
 import { formatForComparison, removeExtraSpaces } from '../removeExtraSpaces'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
 
 export async function saveRealm(access_token: string, realmData: RealmData, id: string) {
     const result = RealmDataSchema.safeParse(realmData)

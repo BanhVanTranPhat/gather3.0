@@ -13,7 +13,7 @@ import CTASection from "./sections/CTASection";
 import FAQSection from "./sections/FAQSection";
 import Footer from "./sections/Footer";
 
-const TOKEN_KEY = 'gather_clone_token';
+const TOKEN_KEY = 'gathering_token';
 
 export default function LandingPage() {
   const router = useRouter();

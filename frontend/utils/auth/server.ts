@@ -3,10 +3,10 @@
  */
 import { cookies } from 'next/headers'
 
-const TOKEN_KEY = 'gather_clone_token'
+const TOKEN_KEY = 'gathering_token'
 
 function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
 }
 
 async function getServerToken(): Promise<string | null> {
@@ -109,7 +109,12 @@ export async function createClient() {
         },
         then(resolve: (r: any) => any, reject?: (e: any) => void) {
           return run()
-            .then((d) => resolve({ data: method === 'POST' ? (Array.isArray(d) ? d : [d]) : d, error: null }))
+            .then((d) => {
+              let result = d
+              if (method === 'POST') result = Array.isArray(d) ? d : [d]
+              else if (method === 'GET' && table === 'realms' && d && !Array.isArray(d) && Array.isArray(d.realms)) result = d.realms
+              return resolve({ data: result, error: null })
+            })
             .catch((e) => (reject ? reject(e) : resolve({ data: null, error: { message: e?.message || 'Request failed' } })))
         },
       }

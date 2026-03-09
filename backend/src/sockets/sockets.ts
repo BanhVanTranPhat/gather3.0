@@ -91,7 +91,7 @@ export function sockets(io: Server) {
             }
 
             if (joiningInProgress.has(uid)) {
-                rejectJoin('Already joining a space.')
+                return rejectJoin('Already joining a space.')
             }
             joiningInProgress.add(uid)
 
@@ -240,9 +240,15 @@ export function sockets(io: Server) {
         })
 
         // ─── Realm chat (persistent channels + DMs) ─────────────────────────
-        socket.on('joinChatChannel', (channelId: string) => {
+        socket.on('joinChatChannel', async (channelId: string) => {
             if (typeof channelId !== 'string') return
-            socket.join(`chat:${channelId}`)
+            try {
+                const uid = socket.handshake.query.uid as string
+                const channel = await (await import('../models/ChatChannel')).default.findById(channelId).lean()
+                if (!channel) return
+                if (channel.type === 'dm' && !channel.members.includes(uid)) return
+                socket.join(`chat:${channelId}`)
+            } catch {}
         })
 
         socket.on('leaveChatChannel', (channelId: string) => {

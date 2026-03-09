@@ -24,9 +24,18 @@ router.get('/profiles/me', async (req: Request, res: Response) => {
 router.patch('/profiles/me', async (req: Request, res: Response) => {
   const user = auth(req)
   if (!user) return res.status(401).json({ message: 'Unauthorized' })
+
+  const allowed: Record<string, unknown> = {}
+  const ALLOWED_FIELDS = ['displayName', 'bio', 'avatar', 'skin', 'avatarConfig'] as const
+  for (const key of ALLOWED_FIELDS) {
+    if (req.body[key] !== undefined) allowed[key] = req.body[key]
+  }
+  if (typeof allowed.displayName === 'string') allowed.displayName = (allowed.displayName as string).slice(0, 100)
+  if (typeof allowed.bio === 'string') allowed.bio = (allowed.bio as string).slice(0, 500)
+
   const profile = await Profile.findOneAndUpdate(
     { id: user.id },
-    { $set: req.body, updatedAt: new Date() },
+    { $set: allowed },
     { upsert: true, new: true }
   ).lean()
   return res.json(profile)

@@ -6,6 +6,7 @@ export interface IProfile extends Document {
   avatar?: string
   avatarConfig?: Record<string, string>
   displayName?: string
+  bio?: string
   visited_realms?: string[]
   updatedAt?: Date
 }
@@ -16,10 +17,13 @@ const profileSchema = new Schema<IProfile>(
     skin: { type: String },
     avatar: { type: String },
     avatarConfig: { type: Schema.Types.Mixed },
-    displayName: { type: String },
-    visited_realms: { type: [String], default: [] },
+    displayName: { type: String, maxlength: 100 },
+    bio: { type: String, default: '', maxlength: 500 },
+    visited_realms: { type: [String], default: [], validate: [(v: string[]) => v.length <= 500, 'Too many visited realms'] },
   },
   { timestamps: true }
 )
+
+profileSchema.index({ visited_realms: 1 })
 
 export default mongoose.model<IProfile>('Profile', profileSchema)

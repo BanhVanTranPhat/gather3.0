@@ -1,38 +1,8 @@
-# dependencies
-node_modules
-frontend/.pnp
-.pnp.js
-.yarn/install-state.gz
-
-# testing
-frontend/coverage
-
-# next.js
-frontend/.next/
-frontend/out/
-
-# production
-frontend/build
-
-# misc
-.DS_Store
-*.pem
-*.swp
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
+node_modules/
+.next/
+dist/
 .env
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-dist
+.env.local
+.env.production
+*.mov
+.DS_Store

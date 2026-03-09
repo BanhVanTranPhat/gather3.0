@@ -1,5 +1,5 @@
 /**
- * Client auth: gọi backend gather-clone (Express + MongoDB).
+ * Client auth: gọi backend Gathering (Express + MongoDB).
  */
 import { getToken, setToken, api, authLogout } from '../backendApi'
 
@@ -38,7 +38,7 @@ export function createClient() {
       },
     },
     from(table: string) {
-      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
       const token = getToken()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
@@ -91,9 +91,13 @@ export function createClient() {
           return chain
         },
         then(resolve: (r: any) => any, reject?: (e: any) => void) {
+          const normalize = (d: any) => {
+            if (method === 'GET' && table === 'realms' && d && !Array.isArray(d) && Array.isArray(d.realms)) return d.realms
+            return d
+          }
           const p =
             method === 'GET'
-              ? run().then((d) => ({ data: d, error: null }))
+              ? run().then((d) => ({ data: normalize(d), error: null }))
               : method === 'POST'
                 ? run().then((d) => ({ data: Array.isArray(d) ? d : [d], error: null }))
                 : method === 'PATCH'

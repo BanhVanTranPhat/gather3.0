@@ -43,7 +43,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ realmId, uid, username }) => {
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const prevChannelRef = useRef<string | null>(null)
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
 
     const fetchChannels = useCallback(async () => {
         const token = getToken()

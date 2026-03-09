@@ -2,7 +2,7 @@
 import 'server-only'
 import revalidate from '../revalidate'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
 
 export async function updateVisitedRealms(accessToken: string, shareId: string) {
     const profileRes = await fetch(`${BACKEND_URL}/profiles/me`, {

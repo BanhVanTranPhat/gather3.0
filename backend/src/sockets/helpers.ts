@@ -20,11 +20,14 @@ export function kickPlayer(uid: string, reason: string) {
     }
 
     const oldSocketId = player.socketId
+
+    // Remove from session BEFORE disconnecting socket to prevent the
+    // disconnect handler from firing and removing the user from the users store
+    sessionManager.logOutPlayer(uid)
+
     const oldSocket = io.sockets.sockets.get(oldSocketId)
     if (oldSocket) {
         oldSocket.leave(session.id)
         oldSocket.disconnect(true)
     }
-
-    sessionManager.logOutPlayer(uid)
 }

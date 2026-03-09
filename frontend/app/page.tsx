@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import LandingPage from './landing/LandingPage'
 
-const TOKEN_KEY = 'gather_clone_token'
+const TOKEN_KEY = 'gathering_token'
 
 export default function Home() {
   const router = useRouter()

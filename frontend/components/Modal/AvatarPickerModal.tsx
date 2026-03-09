@@ -25,7 +25,7 @@ export default function AvatarPickerModal({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
 
   const handlePresetClick = (presetId: string) => {
     setError(null);
@@ -45,7 +45,7 @@ export default function AvatarPickerModal({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const token = typeof window !== "undefined" ? localStorage.getItem("gather_clone_token") : null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("gathering_token") : null;
       const res = await fetch(`${backendUrl}/api/uploads`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},

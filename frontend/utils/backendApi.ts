@@ -1,12 +1,12 @@
 /**
- * Client gọi backend gather-clone (Express + MongoDB).
- * Token lưu localStorage key: gather_clone_token
+ * Client gọi backend Gathering (Express + MongoDB).
+ * Token lưu localStorage key: gathering_token
  */
 
-const TOKEN_KEY = 'gather_clone_token'
+const TOKEN_KEY = 'gathering_token'
 
 function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
 }
 
 export function getToken(): string | null {
@@ -47,7 +47,7 @@ async function request<T = unknown>(
   } catch (e) {
     const msg = (e as Error)?.message || ''
     if (/failed to fetch|networkerror|load failed/i.test(msg))
-      throw new Error('Không kết nối được server. Chạy backend: cd backend && npm run dev (port 4000).')
+      throw new Error('Không kết nối được server. Chạy backend: cd backend && npm run dev (port 5001).')
     throw e
   }
 
@@ -84,18 +84,26 @@ export async function authRegister(email: string, password: string, displayName?
   return data as { token: string; user: { id: string; email: string; displayName?: string } }
 }
 
-export async function authGoogle(payload: { googleId: string; email: string; username?: string; avatar?: string }) {
-  const data = await api.post<{ token: string; user: { id: string; email: string; displayName?: string; avatar?: string } }>(
+export async function authGoogle(payload: { credential?: string; googleId?: string; email?: string; username?: string; avatar?: string }) {
+  const data = await api.post<{ token: string; user: { id: string; email: string; displayName?: string; avatar?: string; role?: string } }>(
     '/auth/google',
-    {
-      googleId: payload.googleId,
-      email: payload.email,
-      username: payload.username ?? payload.email.split('@')[0],
-      avatar: payload.avatar,
-    }
+    payload
   )
   setToken(data.token)
-  return data as { token: string; user: { id: string; email: string; displayName?: string; avatar?: string } }
+  return data
+}
+
+export async function authSendOtp(email: string) {
+  return api.post<{ sent: boolean; isNewUser: boolean }>('/auth/send-otp', { email })
+}
+
+export async function authVerifyOtp(email: string, code: string, displayName?: string) {
+  const data = await api.post<{ token: string; user: { id: string; email: string; displayName?: string } }>(
+    '/auth/verify-otp',
+    { email, code, displayName }
+  )
+  setToken(data.token)
+  return data
 }
 
 export function authLogout() {

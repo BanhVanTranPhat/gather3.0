@@ -16,9 +16,9 @@ const realmSchema = new Schema<IRealm>(
   {
     id: { type: String, sparse: true, unique: true },
     owner_id: { type: String, required: true },
-    name: { type: String, required: true },
+    name: { type: String, required: true, maxlength: 200 },
     map_data: { type: Schema.Types.Mixed },
-    share_id: { type: String, sparse: true },
+    share_id: { type: String, sparse: true, index: true },
     only_owner: { type: Boolean, default: false },
   },
   { timestamps: true, _id: true }

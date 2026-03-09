@@ -5,7 +5,7 @@ export async function generateToken(channelName: string, accessToken: string | n
   if (!process.env.NEXT_PUBLIC_AGORA_APP_ID || !process.env.APP_CERTIFICATE || !accessToken) {
     return null
   }
-  const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'
   const meRes = await fetch(`${base}/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } })
   if (!meRes.ok) return null
 

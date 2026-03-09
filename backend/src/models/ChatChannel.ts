@@ -12,7 +12,7 @@ export interface IChatChannel extends Document {
 const chatChannelSchema = new Schema<IChatChannel>(
   {
     realmId: { type: String, required: true, index: true },
-    name: { type: String, required: true },
+    name: { type: String, required: true, maxlength: 50 },
     type: { type: String, enum: ['channel', 'dm'], required: true },
     members: [{ type: String }],
     createdBy: { type: String, required: true },

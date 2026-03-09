@@ -3,24 +3,34 @@
 import React, { useState, useEffect } from 'react'
 import {
     MagnifyingGlass, Copy, ChatCircle, CalendarBlank,
-    Gear, MapTrifold, Users, Buildings, LinkSimple
+    Gear, MapTrifold, Users, Buildings, LinkSimple, SignOut,
+    BookOpen, ChatCircleDots
 } from '@phosphor-icons/react'
 import signal from '@/utils/signal'
 import InviteModal from '@/components/InviteModal'
+import { api } from '@/utils/backendApi'
 
 export type PlayerInRoom = { uid: string; username: string }
+type RealmMember = { uid: string; displayName: string }
 
-type ActivePanel = 'people' | 'chat' | null
+type ActivePanel = 'people' | 'chat' | 'calendar' | 'library' | 'forum' | null
 
 type PlaySidebarProps = {
     username: string
     currentUid: string
     ownerId: string
     roomName: string
+    realmId: string
     inviteUrl: string
     avatarConfig?: Record<string, string> | null
     showChatPanel: boolean
     onToggleChatPanel: () => void
+    showCalendarPanel: boolean
+    onToggleCalendarPanel: (show: boolean) => void
+    showLibraryPanel: boolean
+    onToggleLibraryPanel: (show: boolean) => void
+    showForumPanel: boolean
+    onToggleForumPanel: (show: boolean) => void
     className?: string
 }
 
@@ -29,13 +39,21 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
     currentUid,
     ownerId,
     roomName,
+    realmId,
     inviteUrl,
     avatarConfig,
     showChatPanel,
     onToggleChatPanel,
+    showCalendarPanel,
+    onToggleCalendarPanel,
+    showLibraryPanel,
+    onToggleLibraryPanel,
+    showForumPanel,
+    onToggleForumPanel,
     className = '',
 }) => {
     const [online, setOnline] = useState<PlayerInRoom[]>([])
+    const [allMembers, setAllMembers] = useState<RealmMember[]>([])
     const [search, setSearch] = useState('')
     const [showInviteModal, setShowInviteModal] = useState(false)
     const [activePanel, setActivePanel] = useState<ActivePanel>('people')
@@ -48,34 +66,76 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
         return () => signal.off('playersInRoom', onPlayersInRoom)
     }, [])
 
+    useEffect(() => {
+        api.get<{ members: RealmMember[] }>(`/realms/${realmId}/members`)
+            .then((data) => setAllMembers(data.members || []))
+            .catch(() => {})
+    }, [realmId])
+
+    const closeOverlays = () => {
+        if (showChatPanel) onToggleChatPanel()
+        if (showCalendarPanel) onToggleCalendarPanel(false)
+        if (showLibraryPanel) onToggleLibraryPanel(false)
+        if (showForumPanel) onToggleForumPanel(false)
+    }
+
     const togglePanel = (panel: ActivePanel) => {
         if (panel === 'chat') {
-            onToggleChatPanel()
+            const wasOpen = showChatPanel
+            closeOverlays()
+            if (!wasOpen) onToggleChatPanel()
+            setActivePanel(wasOpen ? null : panel)
             return
         }
+        if (panel === 'calendar' || panel === 'library' || panel === 'forum') {
+            const togglers: Record<string, [(show: boolean) => void, boolean]> = {
+                calendar: [onToggleCalendarPanel, showCalendarPanel],
+                library: [onToggleLibraryPanel, showLibraryPanel],
+                forum: [onToggleForumPanel, showForumPanel],
+            }
+            const [toggler, wasOpen] = togglers[panel]
+            closeOverlays()
+            if (!wasOpen) toggler(true)
+            setActivePanel(wasOpen ? null : panel)
+            return
+        }
+        closeOverlays()
         setActivePanel(prev => prev === panel ? null : panel)
     }
 
     const closeAll = () => {
         setActivePanel(null)
-        if (showChatPanel) onToggleChatPanel()
+        closeOverlays()
     }
 
-    const filteredOnline = search.trim()
+    const onlineUids = new Set(online.map((p) => p.uid))
+    const offlineMembers = allMembers.filter((m) => !onlineUids.has(m.uid))
+
+    const searchLower = search.trim().toLowerCase()
+    const filteredOnline = searchLower
         ? online.filter(
               (p) =>
-                  p.username.toLowerCase().includes(search.trim().toLowerCase()) ||
-                  p.uid.toLowerCase().includes(search.trim().toLowerCase())
+                  p.username.toLowerCase().includes(searchLower) ||
+                  p.uid.toLowerCase().includes(searchLower)
           )
         : online
+    const filteredOffline = searchLower
+        ? offlineMembers.filter(
+              (m) =>
+                  m.displayName.toLowerCase().includes(searchLower) ||
+                  m.uid.toLowerCase().includes(searchLower)
+          )
+        : offlineMembers
 
     type SidebarButton = { id: string; icon: React.ReactNode; label: string; panel?: ActivePanel; action?: () => void }
     const iconButtons: SidebarButton[] = [
         { id: 'people', icon: <Users className="w-5 h-5" />, label: 'People', panel: 'people' },
         { id: 'search', icon: <MagnifyingGlass className="w-5 h-5" />, label: 'Search', panel: 'people' },
         { id: 'map', icon: <MapTrifold className="w-5 h-5" />, label: 'Map', action: closeAll },
-        { id: 'calendar', icon: <CalendarBlank className="w-5 h-5" />, label: 'Calendar' },
+        { id: 'calendar', icon: <CalendarBlank className="w-5 h-5" />, label: 'Calendar', panel: 'calendar' as ActivePanel },
         { id: 'chat', icon: <ChatCircle className="w-5 h-5" weight={showChatPanel ? 'fill' : 'regular'} />, label: 'Chat', panel: 'chat' },
+        { id: 'library', icon: <BookOpen className="w-5 h-5" weight={showLibraryPanel ? 'fill' : 'regular'} />, label: 'Library', panel: 'library' as ActivePanel },
+        { id: 'forum', icon: <ChatCircleDots className="w-5 h-5" weight={showForumPanel ? 'fill' : 'regular'} />, label: 'Forum', panel: 'forum' as ActivePanel },
     ]
 
     return (
@@ -104,9 +164,11 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
 
                     {iconButtons.map((btn) => {
                         const isMapBtn = btn.id === 'map'
+                        const overlayPanels: Record<string, boolean> = { chat: showChatPanel, calendar: showCalendarPanel, library: showLibraryPanel, forum: showForumPanel }
                         const isActive = isMapBtn
-                            ? (activePanel === null && !showChatPanel)
-                            : btn.panel === 'chat' ? showChatPanel : activePanel === btn.panel
+                            ? (activePanel === null && !showChatPanel && !showCalendarPanel && !showLibraryPanel && !showForumPanel)
+                            : (btn.panel && btn.panel in overlayPanels) ? overlayPanels[btn.panel]
+                            : activePanel === btn.panel
                         return (
                             <button
                                 key={btn.id}
@@ -129,12 +191,12 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                     <a
                         href="/app"
                         className="w-9 h-9 rounded-xl flex items-center justify-center text-[#8B8FA3] hover:text-white hover:bg-white/5 transition-all duration-150"
-                        title="Dashboard"
+                        title="Back to Spaces"
                     >
-                        <Buildings className="w-5 h-5" />
+                        <SignOut className="w-5 h-5" style={{ transform: 'scaleX(-1)' }} />
                     </a>
                     <a
-                        href="/app"
+                        href="/profile"
                         className="w-9 h-9 rounded-xl flex items-center justify-center text-[#8B8FA3] hover:text-white hover:bg-white/5 transition-all duration-150"
                         title="Settings"
                     >
@@ -159,7 +221,7 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                                 </button>
                             </div>
                             <p className="text-[10px] text-[#8B8FA3] mb-3">
-                                Experience Gather together
+                                Experience Gathering together
                             </p>
                             <p className="text-[10px] text-[#6B7280] mb-2">Invite your closest collaborators.</p>
 
@@ -268,10 +330,47 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                                 type="button"
                                 className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-[#8B8FA3] hover:text-white transition-colors mt-1"
                             >
-                                <span>Offline (0)</span>
+                                <span>Offline ({filteredOffline.length})</span>
                                 <span className="text-[9px]">▾</span>
                             </button>
-                            <p className="text-[10px] text-[#4B5060] px-3 py-1.5">Chưa có người offline.</p>
+                            {filteredOffline.length === 0 ? (
+                                <p className="text-[10px] text-[#4B5060] px-3 py-1.5">Chưa có người offline.</p>
+                            ) : (
+                                <ul className="space-y-px">
+                                    {filteredOffline.map((m) => {
+                                        const isOwner = m.uid === ownerId
+                                        return (
+                                            <li
+                                                key={m.uid}
+                                                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors mx-1 opacity-50"
+                                            >
+                                                <div className="relative flex-shrink-0">
+                                                    <div
+                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${isOwner ? 'ring-2 ring-amber-400' : ''}`}
+                                                        style={{ backgroundColor: stringToColor(m.displayName) }}
+                                                    >
+                                                        {m.displayName.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gray-500 border-2 border-[#252840]" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <p className="text-xs font-medium text-white/60 truncate">
+                                                            {m.displayName}
+                                                        </p>
+                                                        {isOwner && (
+                                                            <span className="flex-shrink-0 text-[8px] font-bold px-1 py-px rounded bg-amber-500/20 text-amber-400 uppercase">
+                                                                Owner
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-[#4B5060]">Offline</p>
+                                                </div>
+                                            </li>
+                                        )
+                                    })}
+                                </ul>
+                            )}
                         </div>
                     </div>
                 )}

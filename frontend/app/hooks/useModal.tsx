@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, ReactNode, FC, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
-type Modal = 'None' | 'Create Realm' | 'Account Dropdown' | 'Loading' | 'Delete Room' | 'Teleport' | 'Delete Realm' | 'Skin' | 'Avatar Picker' 
+type Modal = 'None' | 'Create Realm' | 'Join Realm' | 'Account Dropdown' | 'Loading' | 'Delete Room' | 'Teleport' | 'Delete Realm' | 'Skin' | 'Avatar Picker' 
 
 type ErrorModal = 'None' | 'Failed To Connect' | 'Disconnected'
 

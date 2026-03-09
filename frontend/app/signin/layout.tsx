@@ -15,19 +15,19 @@ export default function SignInLayout({
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || 'no-client-id-configured'}>
-    <div className="min-h-screen flex bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100">
+    <div className="min-h-screen flex bg-[#1a1b2e] text-gray-100">
       <VideoDemo />
 
-      <div className="w-full lg:w-[480px] xl:w-[520px] flex flex-col justify-between min-h-screen bg-white dark:bg-gray-800 border-l border-slate-200 dark:border-gray-700 shadow-xl shadow-slate-200/50 dark:shadow-none px-6 sm:px-10 py-8">
+      <div className="w-full lg:w-[480px] xl:w-[520px] flex flex-col justify-between min-h-screen bg-[#1a1b2e] border-l border-[#2D3054] px-6 sm:px-10 py-8">
         <div>
           <div
             className="flex items-center gap-2.5 mb-10 cursor-pointer"
             onClick={() => router.push('/')}
           >
-            <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-teal-200/50 dark:shadow-none">
+            <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-teal-900/30">
               G
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-800 dark:text-white">
+            <span className="font-bold text-xl tracking-tight text-white">
               The Gathering
             </span>
           </div>
@@ -39,14 +39,14 @@ export default function SignInLayout({
           </div>
         </div>
 
-        <div className="flex gap-6 pt-6 text-xs text-slate-400 dark:text-gray-500">
-          <a href="/privacy-policy" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">
+        <div className="flex gap-6 pt-6 text-xs text-gray-500">
+          <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">
             Trợ giúp
           </a>
-          <a href="/privacy-policy" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">
+          <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">
             Điều khoản
           </a>
-          <a href="/privacy-policy" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">
+          <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">
             Quyền riêng tư
           </a>
         </div>

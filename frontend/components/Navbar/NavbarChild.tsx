@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect } from 'react'
 import Link from 'next/link'
-import { PlusCircleIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { PlusCircleIcon, ChatBubbleLeftRightIcon, ArrowRightEndOnRectangleIcon } from '@heroicons/react/24/outline'
 import { useModal } from '@/app/hooks/useModal'
 import { useProfile } from '@/app/contexts/ProfileContext'
 import BasicButton from '../BasicButton'
@@ -28,6 +28,10 @@ export const NavbarChild: React.FC<NavbarChildProps> = ({ name, avatar }) => {
                         <ChatBubbleLeftRightIcon className='h-5 w-5' />
                         Chat
                     </Link>
+                    <BasicButton onClick={() => setModal('Join Realm')} className='flex flex-row items-center gap-2 py-[10px] !bg-transparent border border-[#3F4776] hover:!bg-white/5'>
+                        Join Space
+                        <ArrowRightEndOnRectangleIcon className='h-5'/>
+                    </BasicButton>
                     <BasicButton onClick={() => setModal('Create Realm')} className='flex flex-row items-center gap-2 py-[10px]'>
                         Create Space
                         <PlusCircleIcon className='h-5'/>

@@ -1,6 +1,7 @@
 'use client'
 import React from 'react'
 import CreateRealmModal from './CreateRealmModal'
+import JoinRealmModal from './JoinRealmModal'
 import AccountDropdown from '../AccountDropdown'
 import LoadingModal from './LoadingModal'
 import DeleteRoomModal from './DeleteRoomModal'
@@ -35,6 +36,7 @@ const ModalParent:React.FC = () => {
             {errorModal === 'None' && (
                 <>
                     <CreateRealmModal />
+                    <JoinRealmModal />
                     <AccountDropdown />
                     <LoadingModal />
                     <DeleteRoomModal />

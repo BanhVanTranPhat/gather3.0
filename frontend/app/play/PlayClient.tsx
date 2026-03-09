@@ -5,6 +5,9 @@ import { RealmData } from '@/utils/pixi/types'
 import PlayNavbar from './PlayNavbar'
 import PlaySidebar from './PlaySidebar'
 import ChatPanel from './chat/ChatPanel'
+import CalendarPanel from './CalendarPanel'
+import LibraryPanel from './LibraryPanel'
+import ForumPanel from './ForumPanel'
 import MapZoomControls from './MapZoomControls'
 import MiniMap from './MiniMap'
 import OverviewMap from './OverviewMap'
@@ -44,6 +47,9 @@ const PlayClient: React.FC<PlayClientProps> = ({
     const [showIntroScreen, setShowIntroScreen] = useState(true)
     const [skin, setSkin] = useState(initialSkin || '009')
     const [showChatPanel, setShowChatPanel] = useState(false)
+    const [showCalendarPanel, setShowCalendarPanel] = useState(false)
+    const [showLibraryPanel, setShowLibraryPanel] = useState(false)
+    const [showForumPanel, setShowForumPanel] = useState(false)
     const [inviteUrl, setInviteUrl] = useState('')
 
     useEffect(() => {
@@ -80,10 +86,17 @@ const PlayClient: React.FC<PlayClientProps> = ({
                         currentUid={uid}
                         ownerId={ownerId}
                         roomName={name}
+                        realmId={realmId}
                         inviteUrl={inviteUrl}
                         avatarConfig={avatarConfig}
                         showChatPanel={showChatPanel}
                         onToggleChatPanel={() => setShowChatPanel((v) => !v)}
+                        showCalendarPanel={showCalendarPanel}
+                        onToggleCalendarPanel={(v) => setShowCalendarPanel(v)}
+                        showLibraryPanel={showLibraryPanel}
+                        onToggleLibraryPanel={(v) => setShowLibraryPanel(v)}
+                        showForumPanel={showForumPanel}
+                        onToggleForumPanel={(v) => setShowForumPanel(v)}
                     />
                     <div className="flex-1 flex flex-col min-w-0 relative">
                         <div className="flex-1 relative min-h-0">
@@ -105,6 +118,9 @@ const PlayClient: React.FC<PlayClientProps> = ({
                                 avatarConfig={avatarConfig || undefined}
                             />
                             {showChatPanel && <ChatPanel realmId={realmId} uid={uid} username={username} />}
+                            {showCalendarPanel && <CalendarPanel realmId={realmId} uid={uid} username={username} />}
+                            {showLibraryPanel && <LibraryPanel realmId={realmId} uid={uid} username={username} />}
+                            {showForumPanel && <ForumPanel realmId={realmId} uid={uid} username={username} />}
                         </div>
                         <PlayNavbar
                             username={username}
