@@ -29,7 +29,10 @@ const profileSchema = new mongoose_1.Schema({
     skin: { type: String },
     avatar: { type: String },
     avatarConfig: { type: mongoose_1.Schema.Types.Mixed },
-    displayName: { type: String },
-    visited_realms: { type: [String], default: [] },
+    displayName: { type: String, maxlength: 100 },
+    bio: { type: String, default: '', maxlength: 500 },
+    visited_realms: { type: [String], default: [], validate: [(v) => v.length <= 500, 'Too many visited realms'] },
+    lastPositions: { type: Map, of: new mongoose_1.Schema({ x: Number, y: Number, room: Number }, { _id: false }), default: new Map() },
 }, { timestamps: true });
+profileSchema.index({ visited_realms: 1 });
 exports.default = mongoose_1.default.model('Profile', profileSchema);

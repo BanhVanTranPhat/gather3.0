@@ -1,6 +1,6 @@
 1️⃣ Project Overview
 Project Title
-**Virtual Space Web Application (Gather-like Virtual Office Platform)**
+**The Gathering – Virtual Co-Working Space Platform**
 
 Project Context & Motivation
 Modern collaboration increasingly takes place in remote environments. However, conventional video-conferencing tools lack spatial presence and offer limited support for informal interaction (e.g., hallway conversations, ad-hoc small group discussions).
@@ -9,32 +9,32 @@ From a software engineering perspective, the project integrates several advanced
 Real-time systems: Socket.IO–based presence tracking, chat events, and state synchronization
 
 
-2D runtime rendering: Phaser 3 for map rendering, avatar movement, and entity management
+2D runtime rendering: PixiJS v8 for map rendering, avatar movement, and entity management
 
 
-Scalable WebRTC: Migration from peer-to-peer mesh to SFU architecture using mediasoup (≥20 participants)
+Scalable WebRTC: Agora RTC SDK (cloud SFU) for proximity-based and group audio/video calls (≥20 participants)
 
 
-Security & reliability: JWT-based authentication, rate limiting, input sanitization, and upload constraints
+Security & reliability: JWT-based authentication, rate limiting, input sanitization (Zod), and upload constraints
 
 
 
 High-Level Product Vision
 The goal is to deliver a demo-ready, professional-grade web application that demonstrates:
-A polished, consistent UI (Tailwind CSS v4, dark theme)
+A polished, consistent UI (Tailwind CSS v3.4, dark/light theme)
 
 
 A real-time virtual room with avatar-based spatial interaction
 
 
-Integrated text, voice, and video communication comparable to Gather or Discord
+Integrated text, voice, and video communication comparable to Gather Town
 
 
 
 System Context Diagram
 
 
-Note: Socket.IO serves as the primary signaling backbone. SFU logic is implemented using mediasoup handlers coordinated through backend socket events.
+Note: Socket.IO serves as the primary signaling backbone. Audio/video is handled by Agora RTC SDK (cloud SFU) with proximity-based channel joining.
 
 2️⃣ Purpose & Objectives
 Core Purpose
@@ -58,48 +58,52 @@ Description
 Evidence in Repository
 OBJ-01
 Authentication & sessions
-User onboarding and session persistence
-backend/routes/auth.ts, models/User.ts, models/Session.ts
+User onboarding via email/password, OTP, Google OAuth
+backend/src/routes/auth.ts, models/User.ts
 OBJ-02
 Room entry & invite
 Join rooms and share invite links
-/api/rooms/:roomId/invite, InviteModal.tsx
+routes/realms.ts, InviteModal.tsx
 OBJ-03
 Spatial presence
 Avatar movement in shared 2D map
-GameScene.tsx, phaser
+utils/pixi/PlayApp.ts, Player.ts
 OBJ-04
 Real-time presence
 Online/offline tracking and room member sync
-SocketContext.tsx, RoomMember.ts
+sockets/sockets.ts, PlaySidebar.tsx
 OBJ-05
 Multi-mode chat
-Global, nearby, DM/group chat with history
-chatController.ts, NearbyChatPanel.tsx
+Channels, DM, in-game bubble chat with history
+routes/chat.ts, ChatPanel.tsx
 OBJ-06
 Scalable voice/video
-SFU-based WebRTC (≥20 users)
-webrtc/sfu.ts, WebRTCContext.tsx
+Cloud SFU via Agora RTC SDK (≥20 users)
+utils/video-chat/video-chat.ts, JitsiCallPanel.tsx
 OBJ-07
 Media state sync
-Mic/cam states and speaking indicators
-VoiceChannelView.tsx
+Mic/cam states and camera bubbles on sprites
+Player.ts, PlayNavbar.tsx
 OBJ-08
 Reliability & anti-abuse
-Rate limiting, spam control
-rateLimiter.ts, rules.md
+Rate limiting, Zod validation, JWT auth
+routes/auth.ts, express-rate-limit
 OBJ-09
-Notifications & search
-Notification feed and search APIs
-notificationRoutes.ts, searchRoutes.ts
+Events & Calendar
+Per-space event creation, RSVP, calendar view
+routes/events.ts, CalendarPanel.tsx
 OBJ-10
-File uploads
-Uploads with size/type constraints
-uploadRoutes.ts, upload.ts
+Resource Library
+Digital resource management per space
+routes/resources.ts, LibraryPanel.tsx
 OBJ-11
-Analytics (basic)
-Event/page tracking for demo evaluation
-Analytics.ts, analytics.ts
+Community Forum
+Thread-based discussions per space
+routes/forum.ts, ForumPanel.tsx
+OBJ-12
+Admin Dashboard
+System-wide analytics and management
+routes/admin.ts, admin/page.tsx
 
 
 
@@ -109,34 +113,40 @@ Area
 Included Features
 Notes
 Frontend
-React SPA, Tailwind v4 dark theme, modals, chat layout
-src/
+Next.js 14 App Router, Tailwind CSS, React components
+app/
 Backend
-Express APIs, MongoDB, security middleware
-backend/
+Express.js APIs, MongoDB (Mongoose), security middleware
+backend/src/
 Real-time layer
-Socket.IO for presence & chat
+Socket.IO for presence, chat, media state signaling
 FE ↔ BE
 Virtual room
-Phaser-based 2D map & avatars
-components/game/*
+PixiJS v8–based 2D map & animated avatars
+utils/pixi/*
 Text chat
-Global, nearby, DM, reactions, history
-Persistent
+Channels, DM, in-game bubble messages, typing indicators
+Persistent (MongoDB)
 Voice/video
-mediasoup SFU
-≥20 participants
-Admin logic
-Basic roles (admin/member)
-Ensure ≥1 admin
+Agora RTC SDK (cloud SFU)
+Proximity-based + group calls
+Map Editor
+Tile painting, special tiles, multi-room management
+editor/
+Admin
+Dashboard with charts, user/realm/event/resource management
+admin/page.tsx
+Events
+Calendar, RSVP, per-space events
+CalendarPanel.tsx
+Library
+Resource types: guide, ebook, course, video, audio
+LibraryPanel.tsx
+Forum
+Threads, replies, per-space discussions
+ForumPanel.tsx
 Invites
 Shareable room invite URLs
-Implemented
-Notifications
-UI + APIs
-Implemented
-Uploads
-File uploads with constraints
 Implemented
 
 
@@ -155,6 +165,8 @@ Full CI/CD & cloud infra
 Local demo focus
 Automated load testing
 Manual testing only
+Recording/meeting recap
+Future enhancement
 
 
 
@@ -164,34 +176,34 @@ Deliverable
 Description
 Source Code
 Frontend
-React/Vite/Tailwind
+Next.js 14 / React 18 / Tailwind CSS / PixiJS 8
 Source Code
 Backend
-Express/MongoDB/Socket.IO
+Express.js / MongoDB / Socket.IO / TypeScript
 Source Code
-SFU Module
-mediasoup implementation
+Media Integration
+Agora RTC SDK wrapper
 Database
 Schemas
-User, Room, Message, Analytics, etc.
+User, Profile, Realm, ChatChannel, ChatMessage, Event, Thread, Post, Resource
 Documentation
-System rules
+Tech Stack
+techstack.md
+Documentation
+Coding Rules
 rules.md
 Documentation
-Technical docs
-docs/
+Project Plan
+plan.md
 Academic
 SRS
-Requirements specification
+Requirements specification (SRS.md)
 Academic
-SDS / Architecture
-Design & rationale
-Academic
-User guide
-Usage workflows
+Project Charter
+This document (charter.md)
 Demo
 Local demo package
-.env, run scripts
+.env examples, run scripts, sample data
 
 
 5️⃣ Stakeholders & Nhân sự
@@ -220,7 +232,7 @@ Maintainer (future)
 Maintenance
 Code clarity & documentation
 
-**Tài nguyên hỗ trợ:** Server local, MongoDB, môi trường dev (Node.js, Vite). Có thể cần TURN server cho WebRTC demo.
+**Tài nguyên hỗ trợ:** Server local, MongoDB, môi trường dev (Node.js 20+, Yarn). Agora free tier (10,000 phút/tháng) cho audio/video.
 
 
 6️⃣ Hướng tiếp cận & Phương pháp phát triển
@@ -234,49 +246,55 @@ Phương pháp: **Agile / Scrum**
 | Sprint Review | Cuối sprint: demo increment, thu thập feedback |
 | Sprint Retrospective | Cải thiện quy trình, điều chỉnh Definition of Done |
 | Backlog | GitHub Projects / Kanban; ưu tiên theo MoSCoW |
-| Definition of Done | Feature hoàn thành + test + docs cập nhật |
+| Definition of Done | Feature hoàn thành + không lỗi TypeScript + docs cập nhật |
 
 
 7️⃣ Assumptions, Constraints & Success Criteria
 Assumptions
-Users have modern browsers supporting WebRTC and Canvas
+Users have modern browsers supporting WebRTC and Canvas (Chrome/Edge/Firefox)
 
 
-Local demo environment is available
+Local demo environment is available (Node.js 20+, MongoDB)
 
 
-Small-group, single-region sessions
+Small-group, single-region sessions (30 users max per space)
 
 
 Stable network during demo
 
 
+Agora free tier sufficient for demo (10,000 min/month)
+
+
 Constraints
-Real-time synchronization complexity
+Real-time synchronization complexity (Socket.IO event ordering)
 
 
-NAT traversal for WebRTC
+Agora RTC requires valid App ID; free tier has usage limits
 
 
-Limited capstone timeline
+Limited capstone timeline (9 weeks)
 
 
 Baseline (not enterprise-grade) security
+
+
+PixiJS video rendering requires canvas-based workaround for live MediaStream
 
 
 Success Criteria
 Metric
 Target
 Functional completeness
-Join, move, chat, voice/video
-Voice scalability
-≥20 users per channel
-Consistency
-No message duplication
+Join, move, chat, voice/video, events, library, forum
+Voice/video scalability
+≥20 users per proximity group
+Chat reliability
+No message duplication, real-time delivery
 UX readiness
-Polished dark-theme UI
+Polished UI matching Gather.town aesthetic
 Demo stability
-Predictable local runtime
+Predictable local runtime, no crashes
 
 
 
@@ -284,24 +302,27 @@ Predictable local runtime
 Risk
 Impact
 Mitigation
-WebRTC connectivity
+Agora connectivity / quota
 High
-Local demo assumptions, TURN docs
-Event race conditions
+Testing Mode (no token), monitor usage, fallback to audio-only
+PixiJS video stack overflow
 High
-Server-authoritative state
+Canvas-based frame rendering (15fps) instead of PIXI.VideoSource
+Socket.IO race conditions
+High
+Server-authoritative state, Zod validation
 Message duplication
 Medium
-ID-based deduplication
-Spam/abuse
-Medium
-Rate limiting & constraints
+ID-based deduplication, server-side persistence
 UI inconsistency
 Medium
-Shared design tokens
+Shared Tailwind design tokens, component library
 Demo-day failure
 High
-Checklists & fallback plans
+Checklists, fallback plans, local-only demo setup
+Browser zoom breaks layout
+Medium
+Flex-based layout (not fixed positioning)
 
 
 9️⃣ Governance & Communication Plan
@@ -310,30 +331,33 @@ Plan
 Meetings
 Weekly planning + mid-week sync
 Definition of Done
-Feature + test + docs
+Feature + TypeScript compile + docs
 Decision log
-Stored in docs/
+Stored in doc/
 Issue tracking
 GitHub Projects / Kanban
 Reviews
 PR review by ≥1 member
+Commit convention
+Conventional Commits (see rules.md)
 
 
 🔟 Lịch trình sơ bộ (High-Level Timeline)
-| Giai đoạn | Mô tả | Cột mốc |
+| Giai đoạn | Mô tả | Thời gian |
 | --------- | ----- | ------- |
-| Phase 1 – Foundation | Setup project, auth, room entry, map cơ bản | Sprint 1–2 |
-| Phase 2 – Core Features | Presence, chat, voice/video (P2P → SFU) | Sprint 3–5 |
-| Phase 3 – Polish & Extras | Events, notifications, uploads, admin, UI polish | Sprint 6–7 |
-| Phase 4 – Demo Ready | Testing, docs, demo package, fallback plans | Sprint 8 |
+| Phase 1 – Foundation | Auth, DB setup, map cơ bản, space CRUD | Sprint 1 (01/03 – 14/03) |
+| Phase 2 – Core Real-time | Multiplayer movement, presence, zones | Sprint 2 (15/03 – 28/03) |
+| Phase 3 – Communication | Chat, Agora video/audio, proximity calls | Sprint 3 (29/03 – 11/04) |
+| Phase 4 – Features & Admin | Events, Library, Forum, Admin, Editor | Sprint 4 (12/04 – 25/04) |
+| Phase 5 – Demo Ready | Testing, polish, docs, demo package | Sprint 5 (26/04 – 03/05) |
 
-*Lưu ý: Thời gian cụ thể điều chỉnh theo lịch capstone và năng lực team.*
+*Chi tiết: xem plan.md*
 
 
 1️⃣1️⃣ Summary
 This Project Charter defines the scope, objectives, and governance of a demo-ready virtual collaboration platform built on:
-React + Vite + Tailwind,
- Express + MongoDB,
- Socket.IO, and
- mediasoup SFU for scalable WebRTC.
+Next.js 14 + React 18 + Tailwind CSS (Frontend),
+Express.js + MongoDB + Mongoose (Backend),
+Socket.IO (Real-time), and
+Agora RTC SDK for scalable cloud-based WebRTC audio/video.
 The project prioritizes stability, usability, and demonstrable technical depth, making it suitable for both academic evaluation and real-world inspiration.

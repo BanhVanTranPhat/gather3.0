@@ -31,12 +31,14 @@ exports.comparePassword = comparePassword;
 const mongoose_1 = __importStar(require("mongoose"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const userSchema = new mongoose_1.Schema({
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: false },
-    displayName: { type: String, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+    password: { type: String, required: false, minlength: 6 },
+    displayName: { type: String, trim: true, maxlength: 100 },
     googleId: { type: String, unique: true, sparse: true },
     avatar: { type: String },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
 }, { timestamps: true });
+userSchema.index({ createdAt: -1 });
 exports.default = mongoose_1.default.model('User', userSchema);
 async function hashPassword(pw) {
     return bcryptjs_1.default.hash(pw, 10);

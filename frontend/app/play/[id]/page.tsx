@@ -8,7 +8,10 @@ import { updateVisitedRealms } from '@/utils/backend/updateVisitedRealms'
 import { formatEmailToName } from '@/utils/formatEmailToName'
 import { defaultSkin } from '@/utils/pixi/Player/skins'
 
-export default async function Play({ params, searchParams }: { params: { id: string }, searchParams: { shareId: string } }) {
+export default async function Play({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ shareId?: string }> }) {
+    const { id } = await params
+    const { shareId: searchShareId } = await searchParams
+
     const auth = await createClient()
     const { data: { session } } = await auth.auth.getSession()
     const { data: { user } } = await auth.auth.getUser()
@@ -17,9 +20,9 @@ export default async function Play({ params, searchParams }: { params: { id: str
         return redirect('/signin')
     }
 
-    const { data, error } = !searchParams.shareId
-        ? await auth.from('realms').select('map_data, owner_id, name').eq('id', params.id).single()
-        : await getPlayRealmData(session.access_token, searchParams.shareId)
+    const { data, error } = !searchShareId
+        ? await auth.from('realms').select('map_data, owner_id, name').eq('id', id).single()
+        : await getPlayRealmData(session.access_token, searchShareId)
 
     const { data: profile, error: profileError } = await auth
         .from('profiles')
@@ -47,7 +50,7 @@ export default async function Play({ params, searchParams }: { params: { id: str
         profile.displayName?.trim() ||
         (user.user_metadata?.email ? formatEmailToName(user.user_metadata.email) : 'Player')
 
-    const effectiveShareId = searchParams.shareId || realm.share_id || ''
+    const effectiveShareId = searchShareId || realm.share_id || ''
 
     if (effectiveShareId && realm.owner_id !== user.id) {
         updateVisitedRealms(session.access_token, effectiveShareId)
@@ -58,7 +61,7 @@ export default async function Play({ params, searchParams }: { params: { id: str
             mapData={map_data}
             username={username}
             access_token={session.access_token}
-            realmId={realm.id || params.id}
+            realmId={realm.id || id}
             uid={user.id}
             ownerId={realm.owner_id}
             shareId={effectiveShareId}

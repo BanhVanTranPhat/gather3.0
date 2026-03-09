@@ -1,26 +1,49 @@
-import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, IAgoraRTCRemoteUser, IDataChannelConfig } from 'agora-rtc-sdk-ng'
 import signal from '../signal'
-import { createHash } from 'crypto'
 import { generateToken } from './generateToken'
 import { getToken } from '../backendApi'
 
+let AgoraRTC: any = null
+
+async function getAgoraRTC() {
+    if (!AgoraRTC) {
+        const mod = await import('agora-rtc-sdk-ng')
+        AgoraRTC = mod.default || mod
+    }
+    return AgoraRTC
+}
+
+function simpleHash(input: string): string {
+    let hash = 0
+    for (let i = 0; i < input.length; i++) {
+        const char = input.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash |= 0
+    }
+    return Math.abs(hash).toString(16).padStart(8, '0').substring(0, 16)
+}
+
 export class VideoChat {
-    private client: IAgoraRTCClient = AgoraRTC.createClient({ codec: "vp8", mode: "rtc" })
-    private microphoneTrack: IMicrophoneAudioTrack | null = null
-    private cameraTrack: ICameraVideoTrack | null = null
+    private client: any = null
+    private microphoneTrack: any = null
+    private cameraTrack: any = null
     private currentChannel: string = ''
 
-    private remoteUsers: { [uid: string]: IAgoraRTCRemoteUser } = {}
+    private remoteUsers: { [uid: string]: any } = {}
 
     private channelTimeout: NodeJS.Timeout | null = null
+    private initialized = false
 
-    constructor() {
-        AgoraRTC.setLogLevel(4)
+    private async ensureInit() {
+        if (this.initialized) return
+        const agora = await getAgoraRTC()
+        agora.setLogLevel(4)
+        this.client = agora.createClient({ codec: "vp8", mode: "rtc" })
         this.client.on('user-published', this.onUserPublished)
         this.client.on('user-unpublished', this.onUserUnpublished)
         this.client.on('user-left', this.onUserLeft)
         this.client.on('user-info-updated', this.onUserInfoUpdated)
         this.client.on('user-joined', this.onUserJoined)
+        this.initialized = true
     }
 
     private onUserInfoUpdated = (uid: string) => {
@@ -28,12 +51,12 @@ export class VideoChat {
         signal.emit('user-info-updated', this.remoteUsers[uid])
     }
 
-    private onUserJoined = (user: IAgoraRTCRemoteUser) => {
+    private onUserJoined = (user: any) => {
         this.remoteUsers[user.uid] = user
         signal.emit('user-info-updated', user)
     }
 
-    public onUserPublished = async (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video" | "datachannel", config?: IDataChannelConfig) => {
+    public onUserPublished = async (user: any, mediaType: "audio" | "video" | "datachannel", config?: any) => {
         this.remoteUsers[user.uid] = user
         await this.client.subscribe(user, mediaType)
 
@@ -53,7 +76,7 @@ export class VideoChat {
         }
     }
 
-    public onUserUnpublished = (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video" | "datachannel") => {
+    public onUserUnpublished = (user: any, mediaType: "audio" | "video" | "datachannel") => {
         if (mediaType === 'audio') {
             user.audioTrack?.stop()
         }
@@ -62,14 +85,17 @@ export class VideoChat {
         }
     }
 
-    public onUserLeft = (user: IAgoraRTCRemoteUser, reason: string) => {
+    public onUserLeft = (user: any, reason: string) => {
         delete this.remoteUsers[user.uid]
         signal.emit('user-left', user)
     }
 
     public async toggleCamera(): Promise<MediaStreamTrack | null> {
+        await this.ensureInit()
+        const agora = await getAgoraRTC()
+
         if (!this.cameraTrack) {
-            this.cameraTrack = await AgoraRTC.createCameraVideoTrack()
+            this.cameraTrack = await agora.createCameraVideoTrack()
 
             if (this.client.connectionState === 'CONNECTED') {
                 await this.client.publish([this.cameraTrack])
@@ -98,11 +124,12 @@ export class VideoChat {
         return null
     }
 
-    // TODO: Set it up so microphone gets muted and unmuted instead of enabled and disabled
-
     public async toggleMicrophone() {
+        await this.ensureInit()
+        const agora = await getAgoraRTC()
+
         if (!this.microphoneTrack) {
-            this.microphoneTrack = await AgoraRTC.createMicrophoneAudioTrack()
+            this.microphoneTrack = await agora.createMicrophoneAudioTrack()
 
             if (this.client.connectionState === 'CONNECTED') {
                 await this.client.publish([this.microphoneTrack])
@@ -125,8 +152,8 @@ export class VideoChat {
 
     public getRemoteVideoTracks(): { uid: string; track: any }[] {
         return Object.entries(this.remoteUsers)
-            .filter(([, user]) => user.videoTrack)
-            .map(([, user]) => ({ uid: String(user.uid), track: user.videoTrack }))
+            .filter(([, user]) => (user as any).videoTrack)
+            .map(([, user]) => ({ uid: String((user as any).uid), track: (user as any).videoTrack }))
     }
 
     public playVideoTrackAtElementId(elementId: string) {
@@ -141,6 +168,8 @@ export class VideoChat {
     }
 
     public async joinChannel(channel: string, uid: string, realmId: string) {
+        await this.ensureInit()
+
         if (this.channelTimeout) {
             clearTimeout(this.channelTimeout)
         }
@@ -185,7 +214,7 @@ export class VideoChat {
         this.channelTimeout = setTimeout(async () => {
             if (this.currentChannel === '') return
 
-            if (this.client.connectionState === 'CONNECTED') {
+            if (this.client && this.client.connectionState === 'CONNECTED') {
                 await this.client.leave()
                 this.currentChannel = ''
             }
@@ -208,8 +237,8 @@ export class VideoChat {
     }
 
     private createUniqueChannelId(realmId: string, channel: string): string {
-        const combined = `${realmId}-${channel}`;
-        return createHash('md5').update(combined).digest('hex').substring(0, 16);
+        const combined = `${realmId}-${channel}`
+        return simpleHash(combined)
     }
 }
 

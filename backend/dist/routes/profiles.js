@@ -28,7 +28,17 @@ router.patch('/profiles/me', async (req, res) => {
     const user = auth(req);
     if (!user)
         return res.status(401).json({ message: 'Unauthorized' });
-    const profile = await Profile_1.default.findOneAndUpdate({ id: user.id }, { $set: req.body, updatedAt: new Date() }, { upsert: true, new: true }).lean();
+    const allowed = {};
+    const ALLOWED_FIELDS = ['displayName', 'bio', 'avatar', 'skin', 'avatarConfig'];
+    for (const key of ALLOWED_FIELDS) {
+        if (req.body[key] !== undefined)
+            allowed[key] = req.body[key];
+    }
+    if (typeof allowed.displayName === 'string')
+        allowed.displayName = allowed.displayName.slice(0, 100);
+    if (typeof allowed.bio === 'string')
+        allowed.bio = allowed.bio.slice(0, 500);
+    const profile = await Profile_1.default.findOneAndUpdate({ id: user.id }, { $set: allowed }, { upsert: true, new: true }).lean();
     return res.json(profile);
 });
 exports.default = router;

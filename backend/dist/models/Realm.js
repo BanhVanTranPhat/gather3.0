@@ -27,9 +27,10 @@ const mongoose_1 = __importStar(require("mongoose"));
 const realmSchema = new mongoose_1.Schema({
     id: { type: String, sparse: true, unique: true },
     owner_id: { type: String, required: true },
-    name: { type: String, required: true },
+    name: { type: String, required: true, maxlength: 200 },
     map_data: { type: mongoose_1.Schema.Types.Mixed },
-    share_id: { type: String, sparse: true },
+    mapTemplate: { type: String, default: 'office' },
+    share_id: { type: String, sparse: true, index: true },
     only_owner: { type: Boolean, default: false },
 }, { timestamps: true, _id: true });
 realmSchema.index({ owner_id: 1 });

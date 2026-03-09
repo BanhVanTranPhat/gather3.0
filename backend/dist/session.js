@@ -27,8 +27,8 @@ class SessionManager {
         const realmId = this.playerIdToRealmId[uid];
         return this.sessions[realmId];
     }
-    addPlayerToSession(socketId, realmId, uid, username, skin) {
-        this.sessions[realmId].addPlayer(socketId, uid, username, skin);
+    addPlayerToSession(socketId, realmId, uid, username, skin, avatarConfig = null) {
+        this.sessions[realmId].addPlayer(socketId, uid, username, skin, avatarConfig);
         this.playerIdToRealmId[uid] = realmId;
         this.socketIdToPlayerId[socketId] = uid;
     }
@@ -77,7 +77,7 @@ class Session {
             this.playerPositions[i] = {};
         }
     }
-    addPlayer(socketId, uid, username, skin) {
+    addPlayer(socketId, uid, username, skin, avatarConfig = null) {
         this.removePlayer(uid);
         const spawnIndex = this.map_data.spawnpoint.roomIndex;
         const spawnX = this.map_data.spawnpoint.x;
@@ -90,6 +90,7 @@ class Session {
             room: spawnIndex,
             socketId: socketId,
             skin,
+            avatarConfig,
             proximityId: null,
         };
         this.playerRooms[spawnIndex].add(uid);

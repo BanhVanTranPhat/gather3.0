@@ -7,10 +7,14 @@ exports.getRealmById = getRealmById;
 exports.getProfileById = getProfileById;
 const Realm_1 = __importDefault(require("./models/Realm"));
 const Profile_1 = __importDefault(require("./models/Profile"));
+function isObjectId(id) {
+    return /^[a-fA-F0-9]{24}$/.test(id);
+}
 async function getRealmById(id) {
     if (!id)
         return null;
-    const realm = await Realm_1.default.findOne({ $or: [{ _id: id }, { id }] }).lean();
+    const query = isObjectId(id) ? { $or: [{ _id: id }, { id }] } : { id };
+    const realm = await Realm_1.default.findOne(query).lean();
     if (!realm)
         return null;
     return {
@@ -24,5 +28,5 @@ async function getRealmById(id) {
 }
 async function getProfileById(id) {
     const profile = await Profile_1.default.findOne({ id }).lean();
-    return profile ? { id: profile.id, skin: profile.skin, visited_realms: profile.visited_realms || [] } : null;
+    return profile ? { id: profile.id, skin: profile.skin, avatarConfig: profile.avatarConfig || null, displayName: profile.displayName || null, visited_realms: profile.visited_realms || [], lastPositions: profile.lastPositions || {} } : null;
 }

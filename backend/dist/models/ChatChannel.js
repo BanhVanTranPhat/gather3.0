@@ -26,7 +26,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const chatChannelSchema = new mongoose_1.Schema({
     realmId: { type: String, required: true, index: true },
-    name: { type: String, required: true },
+    name: { type: String, required: true, maxlength: 50 },
     type: { type: String, enum: ['channel', 'dm'], required: true },
     members: [{ type: String }],
     createdBy: { type: String, required: true },

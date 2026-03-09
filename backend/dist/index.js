@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.io = void 0;
+require("dotenv/config");
+require("express-async-errors");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const http_1 = __importDefault(require("http"));
@@ -14,8 +16,11 @@ const realms_1 = __importDefault(require("./routes/realms"));
 const profiles_1 = __importDefault(require("./routes/profiles"));
 const auth_1 = __importDefault(require("./routes/auth"));
 const chat_1 = __importDefault(require("./routes/chat"));
+const events_1 = __importDefault(require("./routes/events"));
+const resources_1 = __importDefault(require("./routes/resources"));
+const forum_1 = __importDefault(require("./routes/forum"));
+const admin_1 = __importDefault(require("./routes/admin"));
 const db_1 = require("./db");
-require('dotenv').config();
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 const FRONTEND_ORIGIN = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
@@ -23,7 +28,7 @@ app.use((0, cors_1.default)({
     origin: FRONTEND_ORIGIN,
     credentials: true,
 }));
-app.use(express_1.default.json({ limit: '50mb' }));
+app.use(express_1.default.json({ limit: '10mb' }));
 const io = new socket_io_1.Server(server, {
     cors: {
         origin: FRONTEND_ORIGIN,
@@ -36,8 +41,16 @@ app.use(auth_1.default);
 app.use(realms_1.default);
 app.use(profiles_1.default);
 app.use(chat_1.default);
+app.use(events_1.default);
+app.use(resources_1.default);
+app.use(forum_1.default);
+app.use(admin_1.default);
 (0, sockets_1.sockets)(io);
-const PORT = process.env.PORT || 4000;
+app.use((err, _req, res, _next) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+});
+const PORT = process.env.PORT || 5001;
 (0, db_1.connectDb)().then(() => {
     server.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}.`);
