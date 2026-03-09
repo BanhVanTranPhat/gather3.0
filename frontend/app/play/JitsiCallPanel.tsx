@@ -2,13 +2,11 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import signal from '@/utils/signal'
-import { X, Minus, Maximize2, Minimize2, Users, PhoneOff, GripHorizontal } from 'lucide-react'
-
-declare global {
-    interface Window {
-        JitsiMeetExternalAPI: any
-    }
-}
+import { videoChat } from '@/utils/video-chat/video-chat'
+import {
+    X, Minus, Maximize2, Minimize2, Users, PhoneOff,
+    GripHorizontal, Mic, MicOff, Video, VideoOff,
+} from 'lucide-react'
 
 type CallInfo = {
     zoneId: string
@@ -21,42 +19,65 @@ type JitsiCallPanelProps = {
     realmId: string
 }
 
-type PanelSize = 'normal' | 'large'
-
-let jitsiScriptLoaded = false
-
-function loadJitsiScript(): Promise<void> {
-    if (jitsiScriptLoaded && window.JitsiMeetExternalAPI) return Promise.resolve()
-    return new Promise((resolve, reject) => {
-        if (document.querySelector('script[src*="external_api.js"]')) {
-            jitsiScriptLoaded = true
-            resolve()
-            return
-        }
-        const script = document.createElement('script')
-        script.src = 'https://meet.jit.si/external_api.js'
-        script.onload = () => { jitsiScriptLoaded = true; resolve() }
-        script.onerror = reject
-        document.head.appendChild(script)
-    })
+type RemoteStream = {
+    uid: string
+    track: MediaStreamTrack | null
 }
+
+type PanelSize = 'normal' | 'large'
 
 const PANEL_SIZES: Record<PanelSize, { w: number; h: number }> = {
     normal: { w: 480, h: 400 },
     large: { w: 680, h: 520 },
 }
 
+function VideoTile({ stream, label, muted }: { stream: MediaStreamTrack | null; label: string; muted?: boolean }) {
+    const videoRef = useRef<HTMLVideoElement>(null)
+
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video || !stream) return
+        video.srcObject = new MediaStream([stream])
+        video.play().catch(() => {})
+        return () => { video.srcObject = null }
+    }, [stream])
+
+    return (
+        <div className="relative bg-[#13152a] rounded-lg overflow-hidden flex items-center justify-center min-h-0">
+            {stream ? (
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted={muted}
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-full bg-[#6C72CB]/30 flex items-center justify-center text-white text-2xl font-bold">
+                        {label.charAt(0).toUpperCase()}
+                    </div>
+                </div>
+            )}
+            <div className="absolute bottom-1.5 left-1.5 bg-black/50 backdrop-blur-sm rounded px-2 py-0.5">
+                <span className="text-white text-[11px] font-medium">{label}</span>
+            </div>
+        </div>
+    )
+}
+
 const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) => {
     const [callInfo, setCallInfo] = useState<CallInfo | null>(null)
-    const [participantCount, setParticipantCount] = useState(0)
     const [minimized, setMinimized] = useState(false)
     const [panelSize, setPanelSize] = useState<PanelSize>('normal')
     const [elapsed, setElapsed] = useState(0)
+    const [micOn, setMicOn] = useState(false)
+    const [camOn, setCamOn] = useState(false)
+    const [remoteStreams, setRemoteStreams] = useState<RemoteStream[]>([])
+    const [localTrack, setLocalTrack] = useState<MediaStreamTrack | null>(null)
     const [dragging, setDragging] = useState(false)
     const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
-    const containerRef = useRef<HTMLDivElement>(null)
     const panelRef = useRef<HTMLDivElement>(null)
-    const apiRef = useRef<any>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const dragStartRef = useRef<{ mouseX: number; mouseY: number; panelX: number; panelY: number } | null>(null)
 
@@ -66,14 +87,23 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
             setElapsed(0)
             setMinimized(false)
             setPosition(null)
+
+            setLocalTrack(videoChat.getLocalCameraMediaStreamTrack())
+            setCamOn(videoChat.isCameraEnabled)
+            setMicOn(videoChat.isMicEnabled)
+
+            const existing = videoChat.getRemoteVideoTracks()
+            setRemoteStreams(existing.map(r => {
+                try {
+                    return { uid: r.uid, track: r.track.getMediaStreamTrack() }
+                } catch { return { uid: r.uid, track: null } }
+            }))
         }
+
         const onLeave = () => {
-            if (apiRef.current) {
-                apiRef.current.dispose()
-                apiRef.current = null
-            }
             setCallInfo(null)
-            setParticipantCount(0)
+            setRemoteStreams([])
+            setLocalTrack(null)
             setElapsed(0)
             setMinimized(false)
             if (timerRef.current) clearInterval(timerRef.current)
@@ -84,106 +114,80 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
         return () => {
             signal.off('joinGroupCall', onJoin)
             signal.off('leaveGroupCall', onLeave)
-            if (apiRef.current) {
-                apiRef.current.dispose()
-                apiRef.current = null
-            }
             if (timerRef.current) clearInterval(timerRef.current)
         }
     }, [])
 
     useEffect(() => {
-        if (callInfo) {
-            timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
-        }
+        if (!callInfo) return
+        timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
         return () => { if (timerRef.current) clearInterval(timerRef.current) }
     }, [callInfo])
 
     useEffect(() => {
-        if (!callInfo || !containerRef.current) return
+        if (!callInfo) return
 
-        let disposed = false
-
-        const initJitsi = async () => {
+        const onRemoteVideo = (data: { agoraUid: string; track: any }) => {
             try {
-                await loadJitsiScript()
-            } catch {
-                console.error('Failed to load Jitsi script')
-                return
-            }
-
-            if (disposed || !containerRef.current) return
-
-            if (apiRef.current) {
-                apiRef.current.dispose()
-                apiRef.current = null
-            }
-
-            const roomName = `gather-${realmId.slice(0, 8)}-${callInfo.zoneId}`
-
-            const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
-                roomName,
-                parentNode: containerRef.current,
-                width: '100%',
-                height: '100%',
-                userInfo: { displayName: username },
-                configOverwrite: {
-                    startWithAudioMuted: true,
-                    startWithVideoMuted: false,
-                    prejoinPageEnabled: false,
-                    disableDeepLinking: true,
-                    disableInviteFunctions: true,
-                    hideConferenceSubject: true,
-                    hideConferenceTimer: true,
-                    toolbarConfig: { alwaysVisible: false, timeout: 3000 },
-                    notifications: [],
-                    disableProfile: true,
-                    enableWelcomePage: false,
-                    enableClosePage: false,
-                },
-                interfaceConfigOverwrite: {
-                    SHOW_JITSI_WATERMARK: false,
-                    SHOW_BRAND_WATERMARK: false,
-                    SHOW_POWERED_BY: false,
-                    DEFAULT_BACKGROUND: '#1a1d2e',
-                    FILM_STRIP_MAX_HEIGHT: 300,
-                    DISABLE_FOCUS_INDICATOR: true,
-                    DISABLE_DOMINANT_SPEAKER_INDICATOR: false,
-                    TOOLBAR_BUTTONS: [
-                        'microphone', 'camera', 'hangup', 'tileview', 'fullscreen',
-                    ],
-                    TOOLBAR_ALWAYS_VISIBLE: false,
-                    VERTICAL_FILMSTRIP: false,
-                },
-            })
-
-            api.on('participantJoined', () => setParticipantCount(prev => prev + 1))
-            api.on('participantLeft', () => setParticipantCount(prev => Math.max(0, prev - 1)))
-            api.on('videoConferenceJoined', () => {
-                setParticipantCount(1)
-                api.executeCommand('setTileView', true)
-            })
-            api.on('readyToClose', () => signal.emit('leaveGroupCall'))
-
-            apiRef.current = api
+                const msTrack: MediaStreamTrack = data.track.getMediaStreamTrack()
+                setRemoteStreams(prev => {
+                    const filtered = prev.filter(r => r.uid !== data.agoraUid)
+                    return [...filtered, { uid: data.agoraUid, track: msTrack }]
+                })
+            } catch {}
         }
 
-        initJitsi()
+        const onRemoteVideoGone = (data: { agoraUid: string }) => {
+            setRemoteStreams(prev => prev.filter(r => r.uid !== data.agoraUid))
+        }
 
-        return () => { disposed = true }
-    }, [callInfo?.zoneId, realmId, username])
+        const onRemoteLeft = () => {
+            setRemoteStreams([])
+        }
+
+        signal.on('remoteVideoPublished', onRemoteVideo)
+        signal.on('remoteVideoUnpublished', onRemoteVideoGone)
+        signal.on('reset-users', onRemoteLeft)
+        return () => {
+            signal.off('remoteVideoPublished', onRemoteVideo)
+            signal.off('remoteVideoUnpublished', onRemoteVideoGone)
+            signal.off('reset-users', onRemoteLeft)
+        }
+    }, [callInfo])
+
+    useEffect(() => {
+        if (!callInfo) return
+        const onLocalMedia = (data: { micOn: boolean; camOn: boolean }) => {
+            setMicOn(data.micOn)
+            setCamOn(data.camOn)
+            setLocalTrack(data.camOn ? videoChat.getLocalCameraMediaStreamTrack() : null)
+        }
+        signal.on('localMediaState', onLocalMedia)
+        return () => { signal.off('localMediaState', onLocalMedia) }
+    }, [callInfo])
+
+    const toggleMic = useCallback(async () => {
+        const newMicOn = !micOn
+        setMicOn(newMicOn)
+        signal.emit('localMediaState', { micOn: newMicOn, camOn })
+    }, [micOn, camOn])
+
+    const toggleCam = useCallback(async () => {
+        const newCamOn = !camOn
+        setCamOn(newCamOn)
+        signal.emit('localMediaState', { micOn, camOn: newCamOn })
+    }, [micOn, camOn])
+
+    const leaveCall = useCallback(() => {
+        signal.emit('leaveGroupCall')
+    }, [])
 
     const onDragStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault()
         const panel = panelRef.current
         if (!panel) return
         const rect = panel.getBoundingClientRect()
-        dragStartRef.current = {
-            mouseX: e.clientX,
-            mouseY: e.clientY,
-            panelX: rect.left,
-            panelY: rect.top,
-        }
+        dragStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, panelX: rect.left, panelY: rect.top }
         setDragging(true)
     }, [])
 
@@ -191,23 +195,15 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
         if (!dragging) return
         const onMove = (e: MouseEvent) => {
             if (!dragStartRef.current) return
-            const dx = e.clientX - dragStartRef.current.mouseX
-            const dy = e.clientY - dragStartRef.current.mouseY
             setPosition({
-                x: dragStartRef.current.panelX + dx,
-                y: dragStartRef.current.panelY + dy,
+                x: dragStartRef.current.panelX + (e.clientX - dragStartRef.current.mouseX),
+                y: dragStartRef.current.panelY + (e.clientY - dragStartRef.current.mouseY),
             })
         }
-        const onUp = () => {
-            setDragging(false)
-            dragStartRef.current = null
-        }
+        const onUp = () => { setDragging(false); dragStartRef.current = null }
         window.addEventListener('mousemove', onMove)
         window.addEventListener('mouseup', onUp)
-        return () => {
-            window.removeEventListener('mousemove', onMove)
-            window.removeEventListener('mouseup', onUp)
-        }
+        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     }, [dragging])
 
     const formatTime = (s: number) => {
@@ -216,21 +212,19 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
         return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
     }
 
-    const toggleSize = useCallback(() => {
-        setPanelSize(s => s === 'normal' ? 'large' : 'normal')
-    }, [])
-
     if (!callInfo) return null
 
     const size = PANEL_SIZES[panelSize]
+    const participantCount = 1 + remoteStreams.length
 
     const panelStyle: React.CSSProperties = position && !minimized
         ? { position: 'fixed', left: position.x, top: position.y, width: size.w, height: size.h, zIndex: 50 }
         : { position: 'absolute', top: 8, right: 8, width: size.w, height: size.h, zIndex: 30 }
 
+    const gridCols = participantCount <= 1 ? 'grid-cols-1' : participantCount <= 4 ? 'grid-cols-2' : 'grid-cols-3'
+
     return (
         <>
-            {/* Minimized bar - shown when minimized, clicking restores the panel */}
             {minimized && (
                 <div
                     className="absolute z-30 bottom-16 right-3 flex items-center gap-2 bg-[#252840] border border-white/10 rounded-full px-3 py-2 shadow-xl cursor-pointer hover:bg-[#2d3055] transition-colors"
@@ -243,7 +237,7 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
                     </span>
                     <span className="text-white/30 text-[10px]">{formatTime(elapsed)}</span>
                     <button
-                        onClick={(e) => { e.stopPropagation(); signal.emit('leaveGroupCall') }}
+                        onClick={(e) => { e.stopPropagation(); leaveCall() }}
                         className="ml-1 p-1 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-colors"
                         title="Leave call"
                     >
@@ -252,16 +246,15 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
                 </div>
             )}
 
-            {/* Main panel - always mounted to keep the Jitsi iframe alive; hidden via CSS when minimized */}
             <div
                 ref={panelRef}
                 className="bg-[#1a1d2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden flex flex-col transition-[width,height] duration-200"
                 style={{
                     ...panelStyle,
-                    ...(minimized ? { position: 'fixed', left: -9999, top: -9999, width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none' } : {}),
+                    ...(minimized ? { position: 'fixed', left: -9999, top: -9999, width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none' as const } : {}),
                 }}
             >
-                {/* Header - draggable */}
+                {/* Header */}
                 <div
                     className="flex items-center justify-between px-3 py-2 bg-[#252840]/80 border-b border-white/5 flex-shrink-0 select-none"
                     onMouseDown={onDragStart}
@@ -277,32 +270,50 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
                         <span className="text-white/25 text-[10px] flex-shrink-0">{formatTime(elapsed)}</span>
                     </div>
                     <div className="flex items-center gap-0.5 flex-shrink-0" onMouseDown={e => e.stopPropagation()}>
-                        <button
-                            onClick={() => setMinimized(true)}
-                            className="text-white/40 hover:text-white/80 p-1.5 rounded hover:bg-white/5 transition-colors"
-                            title="Minimize"
-                        >
+                        <button onClick={() => setMinimized(true)} className="text-white/40 hover:text-white/80 p-1.5 rounded hover:bg-white/5 transition-colors" title="Minimize">
                             <Minus size={13} />
                         </button>
-                        <button
-                            onClick={toggleSize}
-                            className="text-white/40 hover:text-white/80 p-1.5 rounded hover:bg-white/5 transition-colors"
-                            title={panelSize === 'normal' ? 'Enlarge' : 'Shrink'}
-                        >
+                        <button onClick={() => setPanelSize(s => s === 'normal' ? 'large' : 'normal')} className="text-white/40 hover:text-white/80 p-1.5 rounded hover:bg-white/5 transition-colors" title={panelSize === 'normal' ? 'Enlarge' : 'Shrink'}>
                             {panelSize === 'normal' ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
                         </button>
-                        <button
-                            onClick={() => signal.emit('leaveGroupCall')}
-                            className="text-white/40 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-colors"
-                            title="Leave call"
-                        >
+                        <button onClick={leaveCall} className="text-white/40 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-colors" title="Leave call">
                             <X size={13} />
                         </button>
                     </div>
                 </div>
 
-                {/* Jitsi iframe - always mounted */}
-                <div ref={containerRef} className="flex-1 min-h-0" />
+                {/* Video grid */}
+                <div className={`flex-1 min-h-0 grid ${gridCols} gap-1 p-1`}>
+                    <VideoTile stream={localTrack} label={`${username} (You)`} muted />
+                    {remoteStreams.map(rs => (
+                        <VideoTile key={rs.uid} stream={rs.track} label={rs.uid.replace(/^[a-f0-9]{24}/, '')} />
+                    ))}
+                </div>
+
+                {/* Controls */}
+                <div className="flex items-center justify-center gap-3 px-3 py-2.5 bg-[#252840]/80 border-t border-white/5 flex-shrink-0">
+                    <button
+                        onClick={toggleMic}
+                        className={`p-2.5 rounded-full transition-colors ${micOn ? 'bg-white/10 hover:bg-white/15 text-white' : 'bg-red-500/20 hover:bg-red-500/30 text-red-400'}`}
+                        title={micOn ? 'Mute mic' : 'Unmute mic'}
+                    >
+                        {micOn ? <Mic size={18} /> : <MicOff size={18} />}
+                    </button>
+                    <button
+                        onClick={toggleCam}
+                        className={`p-2.5 rounded-full transition-colors ${camOn ? 'bg-white/10 hover:bg-white/15 text-white' : 'bg-red-500/20 hover:bg-red-500/30 text-red-400'}`}
+                        title={camOn ? 'Turn off camera' : 'Turn on camera'}
+                    >
+                        {camOn ? <Video size={18} /> : <VideoOff size={18} />}
+                    </button>
+                    <button
+                        onClick={leaveCall}
+                        className="px-5 py-2.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                        <PhoneOff size={16} />
+                        Leave
+                    </button>
+                </div>
             </div>
         </>
     )

@@ -77,6 +77,8 @@ export class Player {
     private videoBubble: PIXI.Container | null = null
     private videoSprite: PIXI.Sprite | null = null
     private videoSource: any = null
+    private videoCanvas: HTMLCanvasElement | null = null
+    private videoUpdateTimer: ReturnType<typeof setInterval> | null = null
     private videoElement: HTMLVideoElement | null = null
     private mediaStream: MediaStream | null = null
     private hasRemoteVideoTrack: boolean = false
@@ -366,13 +368,16 @@ export class Player {
         maskGfx.fill(0xffffff)
         bubble.addChild(maskGfx)
 
-        const videoSrc = new PIXI.VideoSource({
-            resource: video,
-            autoPlay: true,
-            updateFPS: 15,
-        })
-        this.videoSource = videoSrc
-        const tex = new PIXI.Texture({ source: videoSrc })
+        const dim = R * 4
+        const canvas = document.createElement('canvas')
+        canvas.width = dim
+        canvas.height = dim
+        const ctx = canvas.getContext('2d')!
+        this.videoCanvas = canvas
+
+        const source = PIXI.Texture.from(canvas).source
+        this.videoSource = source
+        const tex = new PIXI.Texture({ source })
         const sprite = new PIXI.Sprite(tex)
         sprite.anchor.set(0.5)
         sprite.width = R * 2
@@ -381,11 +386,22 @@ export class Player {
         bubble.addChild(sprite)
         this.videoSprite = sprite
 
+        this.videoUpdateTimer = setInterval(() => {
+            if (video.readyState >= video.HAVE_CURRENT_DATA) {
+                ctx.drawImage(video, 0, 0, dim, dim)
+                source.update()
+            }
+        }, 1000 / 15)
+
         this.parent.addChild(bubble)
         this.videoBubble = bubble
     }
 
     private stopCamera() {
+        if (this.videoUpdateTimer) {
+            clearInterval(this.videoUpdateTimer)
+            this.videoUpdateTimer = null
+        }
         if (this.videoBubble) {
             this.parent.removeChild(this.videoBubble)
             this.videoBubble.destroy({ children: true })
@@ -395,6 +411,9 @@ export class Player {
         if (this.videoSource) {
             this.videoSource.destroy()
             this.videoSource = null
+        }
+        if (this.videoCanvas) {
+            this.videoCanvas = null
         }
         if (this.videoElement) {
             this.videoElement.srcObject = null

@@ -115,6 +115,20 @@ export class VideoChat {
         return this.microphoneTrack.muted
     }
 
+    public get isCameraEnabled(): boolean {
+        return !!this.cameraTrack && this.cameraTrack.enabled
+    }
+
+    public get isMicEnabled(): boolean {
+        return !!this.microphoneTrack && !this.microphoneTrack.muted
+    }
+
+    public getRemoteVideoTracks(): { uid: string; track: any }[] {
+        return Object.entries(this.remoteUsers)
+            .filter(([, user]) => user.videoTrack)
+            .map(([, user]) => ({ uid: String(user.uid), track: user.videoTrack }))
+    }
+
     public playVideoTrackAtElementId(elementId: string) {
         if (this.cameraTrack) {
             this.cameraTrack.play(elementId)
@@ -132,17 +146,26 @@ export class VideoChat {
         }
 
         this.channelTimeout = setTimeout(async () => {
+            const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID
+            if (!appId) {
+                console.warn('[VideoChat] NEXT_PUBLIC_AGORA_APP_ID not set – skipping Agora channel join')
+                return
+            }
             if (channel === this.currentChannel) return
+
             const uniqueChannelId = this.createUniqueChannelId(realmId, channel)
-            const token = await generateToken(uniqueChannelId, getToken())
-            if (!token) return
+
+            let token: string | null = null
+            try {
+                token = await generateToken(uniqueChannelId, getToken())
+            } catch {}
 
             if (this.client.connectionState === 'CONNECTED') {
                 await this.client.leave()
             }
             this.resetRemoteUsers()
 
-            await this.client.join(process.env.NEXT_PUBLIC_AGORA_APP_ID!, uniqueChannelId, token, uid)
+            await this.client.join(appId, uniqueChannelId, token, uid)
             this.currentChannel = channel
 
             if (this.microphoneTrack && this.microphoneTrack.enabled) {
