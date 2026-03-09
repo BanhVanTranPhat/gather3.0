@@ -40,7 +40,7 @@ const MiniMap: React.FC = () => {
     const py = offsetY + (y - minY) * cellSize + cellSize / 2
 
     return (
-        <div className="absolute bottom-20 left-3 z-10 rounded-lg overflow-hidden bg-primary/95 backdrop-blur border border-[#3F4776] shadow-lg">
+        <div className="absolute bottom-24 left-3 z-10 rounded-lg overflow-hidden bg-primary/95 backdrop-blur border border-[#3F4776] shadow-lg">
             <div className="px-2 py-1 border-b border-[#3F4776]">
                 <p className="text-xs font-medium text-white truncate max-w-[104px]" title={roomName}>
                     {roomName || 'Map'}

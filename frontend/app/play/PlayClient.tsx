@@ -11,6 +11,8 @@ import ForumPanel from './ForumPanel'
 import MapZoomControls from './MapZoomControls'
 import MiniMap from './MiniMap'
 import OverviewMap from './OverviewMap'
+import ViewSelector from './ViewSelector'
+import ProximityCallPrompt from './ProximityCallPrompt'
 import FocusRoomPanel from './FocusRoomPanel'
 import GitHubPanel from './GitHubPanel'
 import JitsiCallPanel from './JitsiCallPanel'
@@ -80,7 +82,7 @@ const PlayClient: React.FC<PlayClientProps> = ({
     return (
         <>
             {!showIntroScreen && (
-                <div className="flex h-screen w-full bg-primary">
+                <div className="flex h-screen w-screen overflow-hidden bg-primary">
                     <PlaySidebar
                         username={username}
                         currentUid={uid}
@@ -98,37 +100,38 @@ const PlayClient: React.FC<PlayClientProps> = ({
                         showForumPanel={showForumPanel}
                         onToggleForumPanel={(v) => setShowForumPanel(v)}
                     />
-                    <div className="flex-1 flex flex-col min-w-0 relative">
-                        <div className="flex-1 relative min-h-0">
-                            <MapZoomControls />
-                            <MiniMap />
-                            <OverviewMap />
-                            <FocusRoomPanel />
-                            <GitHubPanel />
-                            <JitsiCallPanel username={username} realmId={realmId} />
-                            <PixiApp
-                                mapData={mapData}
-                                className="w-full h-full"
-                                username={username}
-                                access_token={access_token}
-                                realmId={realmId}
-                                uid={uid}
-                                shareId={shareId}
-                                initialSkin={skin}
-                                avatarConfig={avatarConfig || undefined}
-                            />
-                            {showChatPanel && <ChatPanel realmId={realmId} uid={uid} username={username} />}
-                            {showCalendarPanel && <CalendarPanel realmId={realmId} uid={uid} username={username} />}
-                            {showLibraryPanel && <LibraryPanel realmId={realmId} uid={uid} username={username} />}
-                            {showForumPanel && <ForumPanel realmId={realmId} uid={uid} username={username} />}
-                        </div>
+                    <div className="flex-1 min-w-0 h-full relative overflow-hidden">
+                        <MapZoomControls />
+                        <MiniMap />
+                        <OverviewMap />
+                        <FocusRoomPanel />
+                        <GitHubPanel />
+                        <JitsiCallPanel username={username} realmId={realmId} />
+                        <PixiApp
+                            mapData={mapData}
+                            className="w-full h-full"
+                            username={username}
+                            access_token={access_token}
+                            realmId={realmId}
+                            uid={uid}
+                            shareId={shareId}
+                            initialSkin={skin}
+                            avatarConfig={avatarConfig || undefined}
+                        />
+                        {showChatPanel && <ChatPanel realmId={realmId} uid={uid} username={username} />}
+                        {showCalendarPanel && <CalendarPanel realmId={realmId} uid={uid} username={username} />}
+                        {showLibraryPanel && <LibraryPanel realmId={realmId} uid={uid} username={username} />}
+                        {showForumPanel && <ForumPanel realmId={realmId} uid={uid} username={username} />}
+                        <ProximityCallPrompt uid={uid} username={username} />
                         <PlayNavbar
                             username={username}
                             skin={skin}
                             realmId={realmId}
                             shareId={shareId}
                             avatarConfig={avatarConfig || undefined}
+                            uid={uid}
                         />
+                        <ViewSelector />
                     </div>
                 </div>
             )}

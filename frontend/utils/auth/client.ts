@@ -74,7 +74,7 @@ export function createClient() {
         },
         insert(obj: any) {
           method = 'POST'
-          body = table === 'realms' ? { name: obj.name, map_data: obj.map_data } : obj
+          body = table === 'realms' ? { name: obj.name, map_data: obj.map_data, mapTemplate: obj.mapTemplate } : obj
           path = table === 'realms' ? '/realms' : '/profiles/me'
           return chain
         },

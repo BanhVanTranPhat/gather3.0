@@ -41,6 +41,13 @@ export class VideoChat {
             user.audioTrack?.play()
         }
 
+        if (mediaType === 'video' && user.videoTrack) {
+            signal.emit('remoteVideoPublished', {
+                agoraUid: String(user.uid),
+                track: user.videoTrack,
+            })
+        }
+
         if (mediaType === 'audio' || mediaType === 'video') {
             signal.emit('user-info-updated', user)
         }
@@ -50,6 +57,9 @@ export class VideoChat {
         if (mediaType === 'audio') {
             user.audioTrack?.stop()
         }
+        if (mediaType === 'video') {
+            signal.emit('remoteVideoUnpublished', { agoraUid: String(user.uid) })
+        }
     }
 
     public onUserLeft = (user: IAgoraRTCRemoteUser, reason: string) => {
@@ -57,24 +67,35 @@ export class VideoChat {
         signal.emit('user-left', user)
     }
 
-    public async toggleCamera() {
+    public async toggleCamera(): Promise<MediaStreamTrack | null> {
         if (!this.cameraTrack) {
             this.cameraTrack = await AgoraRTC.createCameraVideoTrack()
-            this.cameraTrack.play('local-video')
 
             if (this.client.connectionState === 'CONNECTED') {
                 await this.client.publish([this.cameraTrack])
             }
 
-            return false
+            return this.cameraTrack.getMediaStreamTrack()
         }
+
         await this.cameraTrack.setEnabled(!this.cameraTrack.enabled)
 
-        if (this.client.connectionState === 'CONNECTED' && this.cameraTrack.enabled) {
-            await this.client.publish([this.cameraTrack])
+        if (this.client.connectionState === 'CONNECTED') {
+            if (this.cameraTrack.enabled) {
+                await this.client.publish([this.cameraTrack])
+            } else {
+                await this.client.unpublish([this.cameraTrack])
+            }
         }
 
-        return !this.cameraTrack.enabled
+        return this.cameraTrack.enabled ? this.cameraTrack.getMediaStreamTrack() : null
+    }
+
+    public getLocalCameraMediaStreamTrack(): MediaStreamTrack | null {
+        if (this.cameraTrack && this.cameraTrack.enabled) {
+            return this.cameraTrack.getMediaStreamTrack()
+        }
+        return null
     }
 
     // TODO: Set it up so microphone gets muted and unmuted instead of enabled and disabled

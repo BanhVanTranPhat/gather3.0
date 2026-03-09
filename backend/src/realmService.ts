@@ -22,5 +22,5 @@ export async function getRealmById(id: string) {
 
 export async function getProfileById(id: string) {
   const profile = await Profile.findOne({ id }).lean()
-  return profile ? { id: profile.id, skin: profile.skin, avatarConfig: profile.avatarConfig || null, displayName: profile.displayName || null, visited_realms: profile.visited_realms || [] } : null
+  return profile ? { id: profile.id, skin: profile.skin, avatarConfig: profile.avatarConfig || null, displayName: profile.displayName || null, visited_realms: profile.visited_realms || [], lastPositions: profile.lastPositions || {} } : null
 }

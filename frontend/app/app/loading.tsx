@@ -1,14 +1,19 @@
 export default function AppLoading() {
     return (
-        <div className="fixed inset-0 bg-[#1a1b2e] flex flex-col items-center justify-center gap-6 z-50">
-            <div className="relative">
-                <div className="w-16 h-16 border-4 border-[#3F4776] rounded-full" />
-                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-[#6C72CB] rounded-full animate-spin" />
+        <div className="fixed inset-0 bg-[#f5f5f5] flex flex-col items-center justify-center gap-5 z-50">
+            <div className="w-14 h-14 bg-[#2b2d42] rounded-2xl flex items-center justify-center shadow-lg">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <circle cx="8" cy="8" r="3" fill="#fff"/>
+                    <circle cx="16" cy="8" r="3" fill="#fff"/>
+                    <circle cx="8" cy="16" r="3" fill="#fff"/>
+                    <circle cx="16" cy="16" r="3" fill="#fff"/>
+                    <circle cx="12" cy="12" r="2" fill="#fff" opacity="0.6"/>
+                </svg>
             </div>
-            <div className="flex flex-col items-center gap-2">
-                <h2 className="text-xl font-semibold text-white">Loading</h2>
-                <p className="text-sm text-[#9CA3AF]">Fetching your spaces...</p>
+            <div className="w-48 h-1.5 bg-gray-300 rounded-full overflow-hidden">
+                <div className="h-full bg-[#2b2d42] rounded-full animate-[loadingBar_2s_ease-in-out_infinite]" />
             </div>
+            <p className="text-sm text-gray-500 font-medium">Loading data...</p>
         </div>
     )
 }

@@ -5,6 +5,7 @@ import { request } from './requests'
 type ConnectionResponse = {
     success: boolean
     errorMessage: string
+    savedPosition?: { x: number; y: number; room: number } | null
 }
 
 const backend_url: string = process.env.NEXT_PUBLIC_BACKEND_URL as string
@@ -43,10 +44,11 @@ class Server {
                 })
             })
 
-            this.socket.on('joinedRealm', () => {
+            this.socket.on('joinedRealm', (data?: { savedPosition?: { x: number; y: number; room: number } | null }) => {
                 resolve({
                     success: true,
-                    errorMessage: ''
+                    errorMessage: '',
+                    savedPosition: data?.savedPosition ?? null,
                 })
             })
 

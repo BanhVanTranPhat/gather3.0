@@ -10,10 +10,17 @@ type DesktopRealmItemProps = {
     id: string,
     shareId: string,
     shared?: boolean,
-    playerCount?: number
+    playerCount?: number,
+    mapTemplate?: string,
 }
 
-const DesktopRealmItem:React.FC<DesktopRealmItemProps> = ({ name, id, shareId, shared, playerCount }) => {
+const TEMPLATE_STYLES: Record<string, { bg: string; icon: string }> = {
+    home: { bg: 'from-emerald-100 to-green-200', icon: '🏡' },
+    office: { bg: 'from-blue-100 to-indigo-200', icon: '🏢' },
+    blank: { bg: 'from-violet-100 to-purple-200', icon: '📋' },
+}
+
+const DesktopRealmItem:React.FC<DesktopRealmItemProps> = ({ name, id, shareId, shared, playerCount, mapTemplate }) => {
     
     const [showMenu, setShowMenu] = useState<boolean>(false)  
     const router = useRouter()
@@ -21,34 +28,20 @@ const DesktopRealmItem:React.FC<DesktopRealmItemProps> = ({ name, id, shareId, s
     const dotsRef = useRef<HTMLDivElement>(null)
     const { setRealmToDelete, setModal } = useModal()
 
+    const tmpl = TEMPLATE_STYLES[mapTemplate || 'office'] || TEMPLATE_STYLES.office
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node) && dotsRef.current && !dotsRef.current.contains(event.target as Node)) {
                 setShowMenu(false)
             }
         }
-
         document.addEventListener('mousedown', handleClickOutside)
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
-        }
+        return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    function handleDotsClick() {
-        setShowMenu(!showMenu)
-    }
-
-    function handleDelete() {
-        setRealmToDelete({ name, id })
-        setModal('Delete Realm')
-    }
-
     function getLink() {
-        if (shared) {
-            return `/play/${id}?shareId=${shareId}`
-        } else {
-            return `/play/${id}`
-        }
+        return shared ? `/play/${id}?shareId=${shareId}` : `/play/${id}`
     }
 
     function copyShareLink() {
@@ -57,52 +50,83 @@ const DesktopRealmItem:React.FC<DesktopRealmItemProps> = ({ name, id, shareId, s
     }
 
     return (
-        <div className='relative select-none'>
+        <div className='relative select-none group/card'>
             <Link href={getLink()}>
-                <div className='w-full aspect-video relative rounded-3xl border-4 border-transparent hover:border-light-secondary overflow-hidden'>
-                    {/* Background pulse animation */}
-                    <div className='animate-pulse bg-secondary absolute inset-0' />
-                    
-                    {/* Thumbnail image */}
-                    <img 
-                        src='/thumbnail.png' 
-                        className='absolute z-10' 
-                        style={{imageRendering: 'pixelated'}} 
-                    />
-                    
-                    {/* Hover effect and sign-in icon */}
-                    <div className='absolute inset-0 grid place-items-center z-20 opacity-0 hover:opacity-100 transition-opacity duration-300'>
-                        <div className='rounded-full bg-black bg-opacity-70 grid place-items-center absolute p-2'>
-                            <SignIn className='w-8 h-8' />
-                        </div>
+                <div className='w-full aspect-[16/9] relative rounded-xl overflow-hidden border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer'>
+                    {/* Gradient background */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${tmpl.bg}`} />
+
+                    {/* Grid pattern */}
+                    <div className="absolute inset-0 opacity-[0.15]" style={{
+                        backgroundImage: `linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)`,
+                        backgroundSize: '24px 24px',
+                    }} />
+
+                    {/* Template icon */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-5xl opacity-30 group-hover/card:opacity-50 group-hover/card:scale-110 transform transition-all duration-300">
+                            {tmpl.icon}
+                        </span>
                     </div>
-                    
-                    {/* Player count indicator */}
+
+                    {/* Player count */}
                     {playerCount != null && (
-                        <div className='pointer-events-none absolute top-2 left-2 rounded-full px-2 py-1 flex items-center gap-2 bg-black bg-opacity-80 max-w-max z-30'>
-                            <div className='bg-green-500 w-3 h-3 rounded-full' />
-                            <p className='text-sm'>{playerCount}</p>
+                        <div className='absolute top-2.5 left-2.5 rounded-full px-2 py-0.5 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm shadow-sm z-10'>
+                            <div className='bg-green-500 w-2 h-2 rounded-full' />
+                            <p className='text-xs font-medium text-gray-700'>{playerCount}</p>
                         </div>
                     )}
+
+                    {/* Hover overlay */}
+                    <div className='absolute inset-0 bg-black/20 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center'>
+                        <div className='bg-white/90 backdrop-blur-sm rounded-full p-2.5 shadow-md'>
+                            <SignIn className='w-5 h-5 text-gray-700' />
+                        </div>
+                    </div>
                 </div>
             </Link>
-            <div className='mt-2 flex flex-row justify-between'>
-                <p className='text-sm font-semibold'>{name}</p>
+
+            {/* Bottom info */}
+            <div className='mt-2 flex items-center justify-between px-0.5'>
+                <div className='min-w-0 flex-1'>
+                    <p className='text-sm font-semibold text-gray-900 truncate'>{name}</p>
+                </div>
                 {!shared && (
-                    <div className='flex flex-row'>
-                        <LinkIcon className='h-7 w-7 cursor-pointer hover:bg-[#545C8E] rounded-md p-1 animate-colors' onClick={copyShareLink}/>
-                    <div ref={dotsRef}>
-                        <DotsThreeVertical weight='bold' className='h-7 w-7 cursor-pointer hover:bg-[#545C8E] rounded-md p-1 animate-colors' onClick={handleDotsClick}/>
+                    <div className='flex items-center gap-0.5 flex-shrink-0'>
+                        <button
+                            type="button"
+                            onClick={copyShareLink}
+                            className='w-7 h-7 rounded-md flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors'
+                            title="Copy link"
+                        >
+                            <LinkIcon className="w-4 h-4" />
+                        </button>
+                        <div ref={dotsRef}>
+                            <button
+                                type="button"
+                                onClick={() => setShowMenu(!showMenu)}
+                                className='w-7 h-7 rounded-md flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors'
+                            >
+                                <DotsThreeVertical weight='bold' className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
-                </div>)}
+                )}
             </div>
+
+            {/* Dropdown menu */}
             {showMenu && (
-                <div className='absolute w-36 h-24 rounded-lg bg-white right-0 flex flex-col z-10 text-black' ref={menuRef}>
-                    <button className='grow w-full hover:bg-[#B2C5FF] rounded-t-lg text-left pl-4' onClick={() => router.push(`/editor/${id}`)}>
+                <div className='absolute w-40 rounded-xl bg-white border border-gray-200 right-0 top-full mt-1 flex flex-col z-20 shadow-xl overflow-hidden' ref={menuRef}>
+                    <button className='w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors' onClick={() => router.push(`/editor/${id}`)}>
                         Edit Map
                     </button>
-                    <button className='grow w-full hover:bg-[#B2C5FF] text-left pl-4' onClick={() => router.push(`/manage/${id}`)}>Manage</button>
-                    <button className='grow w-full hover:bg-red-500 hover:text-white rounded-b-lg text-left pl-4' onClick={handleDelete}>Delete</button>
+                    <button className='w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors' onClick={() => router.push(`/manage/${id}`)}>
+                        Manage
+                    </button>
+                    <div className="mx-3 h-px bg-gray-100" />
+                    <button className='w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 transition-colors' onClick={() => { setRealmToDelete({ name, id }); setModal('Delete Realm') }}>
+                        Delete
+                    </button>
                 </div>
             )}
         </div>

@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react'
 import {
     MagnifyingGlass, Copy, ChatCircle, CalendarBlank,
-    Gear, MapTrifold, Users, Buildings, LinkSimple, SignOut,
-    BookOpen, ChatCircleDots
+    Gear, MapTrifold, Users, LinkSimple, SignOut,
+    BookOpen, ChatCircleDots, CaretDoubleLeft, CaretDoubleRight,
+    Bell
 } from '@phosphor-icons/react'
 import signal from '@/utils/signal'
 import InviteModal from '@/components/InviteModal'
@@ -57,6 +58,7 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
     const [search, setSearch] = useState('')
     const [showInviteModal, setShowInviteModal] = useState(false)
     const [activePanel, setActivePanel] = useState<ActivePanel>('people')
+    const [collapsed, setCollapsed] = useState(false)
 
     useEffect(() => {
         const onPlayersInRoom = (payload: { online: PlayerInRoom[] }) => {
@@ -85,6 +87,7 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
             closeOverlays()
             if (!wasOpen) onToggleChatPanel()
             setActivePanel(wasOpen ? null : panel)
+            if (collapsed) setCollapsed(false)
             return
         }
         if (panel === 'calendar' || panel === 'library' || panel === 'forum') {
@@ -97,6 +100,12 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
             closeOverlays()
             if (!wasOpen) toggler(true)
             setActivePanel(wasOpen ? null : panel)
+            if (collapsed) setCollapsed(false)
+            return
+        }
+        if (collapsed && panel === 'people') {
+            setCollapsed(false)
+            setActivePanel('people')
             return
         }
         closeOverlays()
@@ -108,35 +117,45 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
         closeOverlays()
     }
 
+    const handleCollapse = () => {
+        if (collapsed) {
+            setCollapsed(false)
+            setActivePanel('people')
+        } else {
+            setCollapsed(true)
+            setActivePanel(null)
+            closeOverlays()
+        }
+    }
+
     const onlineUids = new Set(online.map((p) => p.uid))
     const offlineMembers = allMembers.filter((m) => !onlineUids.has(m.uid))
 
     const searchLower = search.trim().toLowerCase()
     const filteredOnline = searchLower
-        ? online.filter(
-              (p) =>
-                  p.username.toLowerCase().includes(searchLower) ||
-                  p.uid.toLowerCase().includes(searchLower)
-          )
+        ? online.filter((p) =>
+              p.username.toLowerCase().includes(searchLower) ||
+              p.uid.toLowerCase().includes(searchLower))
         : online
     const filteredOffline = searchLower
-        ? offlineMembers.filter(
-              (m) =>
-                  m.displayName.toLowerCase().includes(searchLower) ||
-                  m.uid.toLowerCase().includes(searchLower)
-          )
+        ? offlineMembers.filter((m) =>
+              m.displayName.toLowerCase().includes(searchLower) ||
+              m.uid.toLowerCase().includes(searchLower))
         : offlineMembers
 
-    type SidebarButton = { id: string; icon: React.ReactNode; label: string; panel?: ActivePanel; action?: () => void }
+    type SidebarButton = { id: string; icon: React.ReactNode; label: string; panel?: ActivePanel; action?: () => void; shortcut?: string }
     const iconButtons: SidebarButton[] = [
         { id: 'people', icon: <Users className="w-5 h-5" />, label: 'People', panel: 'people' },
-        { id: 'search', icon: <MagnifyingGlass className="w-5 h-5" />, label: 'Search', panel: 'people' },
+        { id: 'search', icon: <MagnifyingGlass className="w-5 h-5" />, label: 'Search', panel: 'people', shortcut: 'K' },
         { id: 'map', icon: <MapTrifold className="w-5 h-5" />, label: 'Map', action: closeAll },
         { id: 'calendar', icon: <CalendarBlank className="w-5 h-5" />, label: 'Calendar', panel: 'calendar' as ActivePanel },
         { id: 'chat', icon: <ChatCircle className="w-5 h-5" weight={showChatPanel ? 'fill' : 'regular'} />, label: 'Chat', panel: 'chat' },
         { id: 'library', icon: <BookOpen className="w-5 h-5" weight={showLibraryPanel ? 'fill' : 'regular'} />, label: 'Library', panel: 'library' as ActivePanel },
         { id: 'forum', icon: <ChatCircleDots className="w-5 h-5" weight={showForumPanel ? 'fill' : 'regular'} />, label: 'Forum', panel: 'forum' as ActivePanel },
+        { id: 'notifications', icon: <Bell className="w-5 h-5" />, label: 'Notifications', action: closeAll },
     ]
+
+    const showExpandedPanel = !collapsed && activePanel === 'people'
 
     return (
         <>
@@ -147,20 +166,40 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                 roomName={roomName}
             />
 
-            <div className={`flex h-full ${className}`}>
-                {/* Slim icon bar */}
-                <div className="w-12 flex-shrink-0 flex flex-col items-center bg-[#1E2035] border-r border-[#2D3054] py-3 gap-1 z-10">
+            <div className={`flex-shrink-0 flex h-full ${className}`}>
+                {/* Slim icon bar - always visible */}
+                <div className="w-12 flex-shrink-0 flex flex-col items-center bg-[#1E2035] border-r border-[#2D3054] py-3 gap-0.5 z-10">
                     {/* Room logo */}
                     <button
                         type="button"
-                        onClick={() => togglePanel('people')}
-                        className="w-9 h-9 rounded-xl bg-[#6C72CB] flex items-center justify-center text-white font-bold text-sm mb-3 hover:opacity-90 transition-opacity"
+                        onClick={() => {
+                            if (collapsed) {
+                                setCollapsed(false)
+                                setActivePanel('people')
+                            } else {
+                                togglePanel('people')
+                            }
+                        }}
+                        className="w-9 h-9 rounded-xl bg-[#6C72CB] flex items-center justify-center text-white font-bold text-sm hover:opacity-90 transition-opacity mb-0.5"
                         title={roomName}
                     >
                         {roomName.charAt(0).toUpperCase()}
                     </button>
 
-                    <div className="w-6 h-px bg-[#2D3054] mb-2" />
+                    {/* Collapse/Expand toggle */}
+                    <button
+                        type="button"
+                        onClick={handleCollapse}
+                        className="w-9 h-5 rounded-md flex items-center justify-center text-[#8B8FA3] hover:text-white hover:bg-white/5 transition-all duration-150 mb-1 group relative"
+                        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    >
+                        {collapsed
+                            ? <CaretDoubleRight className="w-3.5 h-3.5" />
+                            : <CaretDoubleLeft className="w-3.5 h-3.5" />
+                        }
+                    </button>
+
+                    <div className="w-6 h-px bg-[#2D3054] mb-1" />
 
                     {iconButtons.map((btn) => {
                         const isMapBtn = btn.id === 'map'
@@ -174,7 +213,7 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                                 key={btn.id}
                                 type="button"
                                 onClick={() => btn.action ? btn.action() : btn.panel ? togglePanel(btn.panel) : undefined}
-                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 relative group ${
                                     isActive
                                         ? 'bg-white/15 text-white shadow-sm'
                                         : 'text-[#8B8FA3] hover:text-white hover:bg-white/5'
@@ -182,6 +221,12 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                                 title={btn.label}
                             >
                                 {btn.icon}
+                                {collapsed && (
+                                    <span className="absolute left-full ml-2 px-2 py-1 rounded-md bg-[#1a1b2e] text-white text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-lg border border-[#3F4776]/40 z-50">
+                                        {btn.label}
+                                        {btn.shortcut && <span className="ml-2 text-[#6B7280]">{btn.shortcut}</span>}
+                                    </span>
+                                )}
                             </button>
                         )
                     })}
@@ -205,19 +250,20 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                 </div>
 
                 {/* Expandable panel */}
-                {activePanel === 'people' && (
-                    <div className="w-[220px] flex-shrink-0 flex flex-col bg-[#252840] border-r border-[#2D3054] animate-fade-in">
+                {showExpandedPanel && (
+                    <div className="w-[220px] flex-shrink-0 flex flex-col bg-[#252840] border-r border-[#2D3054] sidebar-slide-in overflow-hidden">
                         {/* Room header */}
                         <div className="p-4 pb-3">
                             <div className="flex items-center gap-2 mb-1">
                                 <h2 className="text-white font-semibold text-sm truncate flex-1">{roomName}</h2>
+                                {/* Collapse button (replaces copy-link) */}
                                 <button
                                     type="button"
-                                    onClick={() => navigator.clipboard.writeText(inviteUrl)}
+                                    onClick={handleCollapse}
                                     className="p-1 rounded hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors"
-                                    title="Copy invite link"
+                                    title="Collapse sidebar"
                                 >
-                                    <LinkSimple className="w-3.5 h-3.5" />
+                                    <CaretDoubleLeft className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                             <p className="text-[10px] text-[#8B8FA3] mb-3">
@@ -334,7 +380,7 @@ const PlaySidebar: React.FC<PlaySidebarProps> = ({
                                 <span className="text-[9px]">▾</span>
                             </button>
                             {filteredOffline.length === 0 ? (
-                                <p className="text-[10px] text-[#4B5060] px-3 py-1.5">Chưa có người offline.</p>
+                                <p className="text-[10px] text-[#4B5060] px-3 py-1.5">No offline members.</p>
                             ) : (
                                 <ul className="space-y-px">
                                     {filteredOffline.map((m) => {

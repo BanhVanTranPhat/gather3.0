@@ -1,5 +1,5 @@
 import { Server } from 'socket.io'
-import { JoinRealm, Disconnect, OnEventCallback, MovePlayer, Teleport, ChangedSkin, NewMessage } from './socket-types'
+import { JoinRealm, Disconnect, OnEventCallback, MovePlayer, Teleport, ChangedSkin, NewMessage, MediaState, CallRequest, CallResponse } from './socket-types'
 import { z } from 'zod'
 import { verifyToken } from '../auth'
 import { getRealmById, getProfileById } from '../realmService'
@@ -9,6 +9,7 @@ import { removeExtraSpaces } from '../utils'
 import { kickPlayer } from './helpers'
 import { formatEmailToName } from '../utils'
 import ChatMessage from '../models/ChatMessage'
+import Profile from '../models/Profile'
 
 const joiningInProgress = new Set<string>()
 
@@ -134,10 +135,22 @@ export function sockets(io: Server) {
                 const username = (profile as any).displayName?.trim() || formatEmailToName(email)
                 sessionManager.addPlayerToSession(socket.id, canonicalRealmId, uid, username, profile.skin || '009', (profile as any).avatarConfig || null)
                 const newSession = sessionManager.getPlayerSession(uid)
-                const player = newSession.getPlayer(uid)   
+                const player = newSession.getPlayer(uid)
+
+                const savedPos = (profile as any).lastPositions?.get?.(canonicalRealmId) ?? (profile as any).lastPositions?.[canonicalRealmId]
+                if (savedPos && typeof savedPos.x === 'number' && typeof savedPos.y === 'number') {
+                    const roomIdx = typeof savedPos.room === 'number' ? savedPos.room : mapData.spawnpoint.roomIndex
+                    if (roomIdx !== player.room) {
+                        newSession.changeRoom(uid, roomIdx, savedPos.x, savedPos.y)
+                    } else {
+                        newSession.movePlayer(uid, savedPos.x, savedPos.y)
+                    }
+                }
 
                 socket.join(canonicalRealmId)
-                socket.emit('joinedRealm')
+                socket.emit('joinedRealm', {
+                    savedPosition: savedPos ? { x: player.x, y: player.y, room: player.room } : null
+                })
                 emit('playerJoinedRoom', player)
                 joiningInProgress.delete(uid)
             }
@@ -162,9 +175,17 @@ export function sockets(io: Server) {
             }
         })
 
-        // Handle a disconnection
         on('disconnect', Disconnect, ({ session, data }) => {
             const uid = socket.handshake.query.uid as string
+            const player = session.getPlayer(uid)
+            if (player) {
+                const realmId = session.id
+                Profile.findOneAndUpdate(
+                    { id: uid },
+                    { $set: { [`lastPositions.${realmId}`]: { x: player.x, y: player.y, room: player.room } } },
+                    { upsert: false }
+                ).catch(() => {})
+            }
             const socketIds = sessionManager.getSocketIdsInRoom(session.id, session.getPlayerRoom(uid))
             const success = sessionManager.logOutBySocketId(socket.id)
             if (success) {
@@ -237,6 +258,43 @@ export function sockets(io: Server) {
 
             const uid = socket.handshake.query.uid as string
             emit('receiveMessage', { uid, message })
+        })
+
+        on('mediaState', MediaState, ({ session, data }) => {
+            const uid = socket.handshake.query.uid as string
+            emit('remoteMediaState', { uid, micOn: data.micOn, camOn: data.camOn })
+        })
+
+        socket.on('callRequest', (data: { targetUid: string }) => {
+            if (!data?.targetUid) return
+            const uid = socket.handshake.query.uid as string
+            const session = sessionManager.getPlayerSession(uid)
+            if (!session) return
+            const caller = session.getPlayer(uid)
+            const target = session.getPlayer(data.targetUid)
+            if (!caller || !target) return
+            io.to(target.socketId).emit('callRequest', {
+                fromUid: uid,
+                fromUsername: caller.username,
+                proximityId: caller.proximityId,
+            })
+        })
+
+        socket.on('callResponse', (data: { callerUid: string; accept: boolean }) => {
+            if (!data?.callerUid) return
+            const uid = socket.handshake.query.uid as string
+            const session = sessionManager.getPlayerSession(uid)
+            if (!session) return
+            const caller = session.getPlayer(data.callerUid)
+            const responder = session.getPlayer(uid)
+            if (!caller || !responder) return
+            if (data.accept) {
+                const proximityId = caller.proximityId || responder.proximityId
+                io.to(caller.socketId).emit('callAccepted', { proximityId, byUid: uid, byUsername: responder.username })
+                io.to(responder.socketId).emit('callAccepted', { proximityId, byUid: uid, byUsername: responder.username })
+            } else {
+                io.to(caller.socketId).emit('callRejected', { byUid: uid, byUsername: responder.username })
+            }
         })
 
         // ─── Realm chat (persistent channels + DMs) ─────────────────────────

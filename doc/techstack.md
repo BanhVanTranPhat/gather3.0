@@ -1,0 +1,1 @@
+techtack va li do chon

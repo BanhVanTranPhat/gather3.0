@@ -2,12 +2,14 @@ import { Router, Request, Response } from 'express'
 import { verifyToken } from '../auth'
 import Realm from '../models/Realm'
 import Profile from '../models/Profile'
+import User from '../models/User'
 import { v4 as uuidv4 } from 'uuid'
 import Event from '../models/Event'
 import Thread from '../models/Thread'
 import Post from '../models/Post'
 import Resource from '../models/Resource'
 import ChatChannel from '../models/ChatChannel'
+import { formatEmailToName } from '../utils'
 import ChatMessage from '../models/ChatMessage'
 
 const router = Router()
@@ -33,9 +35,9 @@ router.get('/realms', async (req: Request, res: Response) => {
   const page = Math.max(1, Number(req.query.page) || 1)
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 50))
   const total = await Realm.countDocuments({ owner_id: user.id })
-  const owned = await Realm.find({ owner_id: user.id }).select('id name share_id').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean()
+  const owned = await Realm.find({ owner_id: user.id }).select('id name share_id mapTemplate').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean()
   return res.json({
-    realms: owned.map((r) => ({ id: (r as any).id || (r as any)._id?.toString(), name: r.name, share_id: r.share_id })),
+    realms: owned.map((r) => ({ id: (r as any).id || (r as any)._id?.toString(), name: r.name, share_id: r.share_id, mapTemplate: (r as any).mapTemplate || 'office' })),
     pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
   })
 })
@@ -75,11 +77,18 @@ router.get('/realms/:id/members', async (req: Request, res: Response) => {
   const shareId = realm.share_id
   const members: { uid: string; displayName: string }[] = []
 
-  // Owner
+  async function resolveName(profileId: string, profileDisplayName?: string): Promise<string> {
+    if (profileDisplayName?.trim()) return profileDisplayName.trim()
+    const u = await User.findById(profileId).select('email displayName').lean()
+    if (u?.displayName?.trim()) return u.displayName.trim()
+    if (u?.email) return formatEmailToName(u.email)
+    return profileId.slice(0, 8)
+  }
+
   const ownerProfile = await Profile.findOne({ id: realm.owner_id }).lean()
   members.push({
     uid: realm.owner_id,
-    displayName: ownerProfile?.displayName || 'Owner',
+    displayName: await resolveName(realm.owner_id, ownerProfile?.displayName),
   })
 
   if (shareId) {
@@ -91,7 +100,7 @@ router.get('/realms/:id/members', async (req: Request, res: Response) => {
       if (v.id === realm.owner_id) continue
       members.push({
         uid: v.id,
-        displayName: v.displayName || v.id.slice(0, 8),
+        displayName: await resolveName(v.id, v.displayName),
       })
     }
   }
@@ -102,12 +111,13 @@ router.get('/realms/:id/members', async (req: Request, res: Response) => {
 router.post('/realms', async (req: Request, res: Response) => {
   const user = auth(req)
   if (!user) return res.status(401).json({ message: 'Unauthorized' })
-  const { name, map_data } = req.body || {}
+  const { name, map_data, mapTemplate } = req.body || {}
   const realm = await Realm.create({
     id: uuidv4(),
     owner_id: user.id,
     name: name || 'New Space',
     map_data: map_data || null,
+    mapTemplate: mapTemplate || 'office',
     share_id: uuidv4().slice(0, 8),
     only_owner: false,
   })
@@ -116,6 +126,7 @@ router.post('/realms', async (req: Request, res: Response) => {
     name: realm.name,
     share_id: realm.share_id,
     owner_id: realm.owner_id,
+    mapTemplate: realm.mapTemplate,
   })
 })
 

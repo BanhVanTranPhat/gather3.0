@@ -12,12 +12,12 @@ import { removeExtraSpaces } from '@/utils/removeExtraSpaces'
 import defaultMap from '@/utils/defaultmap.json'
 import officeMap from '@/utils/officemap.json'
 
-type MapTemplate = 'starter' | 'office' | 'scratch'
+type MapTemplate = 'home' | 'office' | 'blank'
 
-const MAP_TEMPLATES: { value: MapTemplate; label: string; description: string }[] = [
-    { value: 'starter', label: 'Starter Map', description: 'Outdoor park with trees & paths' },
-    { value: 'office', label: 'Office Map', description: '3 offices + lounge room' },
-    { value: 'scratch', label: 'Blank', description: 'Empty map, build from zero' },
+const MAP_TEMPLATES: { value: MapTemplate; label: string; description: string; color: string; icon: string }[] = [
+    { value: 'home', label: 'Home', description: 'Outdoor park with trees & paths', color: '#22c55e', icon: '🏡' },
+    { value: 'office', label: 'Office', description: '3 offices + lounge room', color: '#3b82f6', icon: '🏢' },
+    { value: 'blank', label: 'Blank', description: 'Empty map, build from zero', color: '#8b5cf6', icon: '📋' },
 ]
 
 const CreateRealmModal:React.FC = () => {
@@ -44,8 +44,9 @@ const CreateRealmModal:React.FC = () => {
         const realmData: any = {
             owner_id: uid,
             name: realmName,
+            mapTemplate: template,
         }
-        if (template === 'starter') {
+        if (template === 'home') {
             realmData.map_data = defaultMap
         } else if (template === 'office') {
             realmData.map_data = officeMap
@@ -89,7 +90,7 @@ const CreateRealmModal:React.FC = () => {
                         {MAP_TEMPLATES.map((t) => (
                             <label
                                 key={t.value}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${
+                                className={`flex items-center gap-3 px-3 py-3 rounded-xl border cursor-pointer transition-all ${
                                     template === t.value
                                         ? 'border-blue-500 bg-blue-500/10 shadow-sm shadow-blue-500/20'
                                         : 'border-gray-600/50 hover:border-gray-400 hover:bg-white/5'
@@ -101,11 +102,22 @@ const CreateRealmModal:React.FC = () => {
                                     value={t.value}
                                     checked={template === t.value}
                                     onChange={() => setTemplate(t.value)}
-                                    className='accent-blue-500'
+                                    className='accent-blue-500 hidden'
                                 />
+                                <div
+                                    className='w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0'
+                                    style={{ backgroundColor: t.color + '20' }}
+                                >
+                                    {t.icon}
+                                </div>
                                 <div className='flex-1'>
-                                    <p className='text-sm font-medium'>{t.label}</p>
+                                    <p className='text-sm font-semibold'>{t.label}</p>
                                     <p className='text-xs text-gray-400'>{t.description}</p>
+                                </div>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                    template === t.value ? 'border-blue-500' : 'border-gray-500'
+                                }`}>
+                                    {template === t.value && <div className='w-2.5 h-2.5 rounded-full bg-blue-500' />}
                                 </div>
                             </label>
                         ))}

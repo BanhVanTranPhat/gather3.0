@@ -98,7 +98,7 @@ export async function authSendOtp(email: string) {
 }
 
 export async function authVerifyOtp(email: string, code: string, displayName?: string) {
-  const data = await api.post<{ token: string; user: { id: string; email: string; displayName?: string } }>(
+  const data = await api.post<{ token: string; user: { id: string; email: string; displayName?: string; role?: string } }>(
     '/auth/verify-otp',
     { email, code, displayName }
   )

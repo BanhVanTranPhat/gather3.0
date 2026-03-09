@@ -19,7 +19,7 @@ export default async function App() {
     }
 
     const realms: any = []
-    const { data: ownedRealms, error } = await auth.from('realms').select('id, name, share_id')
+    const { data: ownedRealms, error } = await auth.from('realms').select('id, name, share_id, mapTemplate')
     if (ownedRealms) {
         realms.push(...ownedRealms)
     }
@@ -33,10 +33,11 @@ export default async function App() {
     const errorMessage = error?.message || ''
 
     return (
-        <div>
+        <div className='min-h-screen bg-[#f5f5f5]'>
             <Navbar />
-            <h1 className='text-3xl pl-4 sm:pl-8 pt-8'>Your Spaces</h1>
-            <RealmsMenu realms={realms} errorMessage={errorMessage}/>
+            <div className='max-w-6xl mx-auto px-6 pt-6'>
+                <RealmsMenu realms={realms} errorMessage={errorMessage}/>
+            </div>
         </div>
     )
 }

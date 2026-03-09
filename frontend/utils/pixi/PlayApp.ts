@@ -8,6 +8,7 @@ import signal from '../signal'
 import { createClient } from '../auth/client'
 import { gsap } from 'gsap'
 import { getZoneAt, officeZones } from '../zones'
+import { videoChat } from '../video-chat/video-chat'
 
 const MIN_ZOOM = 0.3
 const MAX_ZOOM = 3
@@ -35,6 +36,8 @@ export class PlayApp extends App {
     private currentPrivateAreaTiles: TilePoint[] = []
     public proximityId: string | null = null
     private avatarConfig?: Record<string, string>
+
+    public savedPosition: { x: number; y: number; room: number } | null = null
 
     constructor(uid: string, realmId: string, realmData: RealmData, username: string, skin: string = defaultSkin, avatarConfig?: Record<string, string>) {
         super(realmData)
@@ -202,7 +205,8 @@ export class PlayApp extends App {
     public async init() {
         await super.init()
         await this.loadAssets()
-        await this.loadRoom(this.realmData.spawnpoint.roomIndex)
+        const startRoom = this.savedPosition?.room ?? this.realmData.spawnpoint.roomIndex
+        await this.loadRoom(startRoom)
         this.app.stage.eventMode = 'static'
         this.setScale(this.scale)
         this.app.renderer.on('resize', this.resizeEvent)
@@ -253,6 +257,9 @@ export class PlayApp extends App {
 
         if (this.teleportLocation) {
             this.player.setPosition(this.teleportLocation.x, this.teleportLocation.y)
+        } else if (this.savedPosition && this.savedPosition.room === this.currentRoomIndex) {
+            this.player.setPosition(this.savedPosition.x, this.savedPosition.y)
+            this.savedPosition = null
         } else {
             this.player.setPosition(this.realmData.spawnpoint.x, this.realmData.spawnpoint.y)
         }
@@ -576,6 +583,81 @@ export class PlayApp extends App {
         this.moveCameraToPlayer()
     }
 
+    private localMicOn = false
+    private localCamOn = false
+
+    private onLocalMediaState = async (data: { micOn: boolean; camOn: boolean }) => {
+        server.socket.emit('mediaState', data)
+
+        if (data.camOn !== this.localCamOn) {
+            this.localCamOn = data.camOn
+            try {
+                const mediaStreamTrack = await videoChat.toggleCamera()
+                if (mediaStreamTrack && data.camOn) {
+                    this.player.showLocalCamera(mediaStreamTrack)
+                }
+            } catch (e) {
+                console.warn('Failed to toggle Agora camera:', e)
+            }
+        }
+        if (data.micOn !== this.localMicOn) {
+            this.localMicOn = data.micOn
+            try { await videoChat.toggleMicrophone() } catch (e) {
+                console.warn('Failed to toggle Agora mic:', e)
+            }
+        }
+
+        this.player.setMediaState(data.micOn, data.camOn)
+    }
+
+    private onRemoteMediaState = (data: { uid: string; micOn: boolean; camOn: boolean }) => {
+        const player = this.players[data.uid]
+        if (player) {
+            player.setMediaState(data.micOn, data.camOn)
+        }
+    }
+
+    private onViewModeChanged = (mode: string) => {
+        if (mode === 'simplified') {
+            this.zoomTo(1.0)
+            this.layers.above_floor.alpha = 0.3
+        } else if (mode === 'immersive') {
+            this.zoomTo(1.5)
+            this.layers.above_floor.alpha = 1
+        } else {
+            this.layers.above_floor.alpha = 1
+            this.zoomTo(1.5)
+        }
+    }
+
+    private onSendEmoji = (emoji: string) => {
+        this.player.setMessage(emoji)
+        server.socket.emit('sendMessage', emoji)
+    }
+
+    private findPlayerByAgoraUid = (agoraUid: string): Player | null => {
+        for (const [uid, player] of Object.entries(this.players)) {
+            if (agoraUid === uid + player.username || agoraUid.startsWith(uid)) {
+                return player
+            }
+        }
+        return null
+    }
+
+    private onRemoteVideoPublished = (data: { agoraUid: string; track: any }) => {
+        const player = this.findPlayerByAgoraUid(data.agoraUid)
+        if (player) {
+            player.setRemoteVideoFromTrack(data.track)
+        }
+    }
+
+    private onRemoteVideoUnpublished = (data: { agoraUid: string }) => {
+        const player = this.findPlayerByAgoraUid(data.agoraUid)
+        if (player) {
+            player.clearRemoteVideo()
+        }
+    }
+
     private setUpSignalListeners = () => {
         signal.on('requestSkin', this.onRequestSkin)
         signal.on('switchSkin', this.onSwitchSkin)
@@ -586,6 +668,11 @@ export class PlayApp extends App {
         signal.on('mapZoomOut', this.zoomOut)
         signal.on('mapZoomDelta', this.zoomByDelta)
         signal.on('navigateToTile', this.navigateToTile)
+        signal.on('localMediaState', this.onLocalMediaState)
+        signal.on('viewModeChanged', this.onViewModeChanged)
+        signal.on('sendEmoji', this.onSendEmoji)
+        signal.on('remoteVideoPublished', this.onRemoteVideoPublished)
+        signal.on('remoteVideoUnpublished', this.onRemoteVideoUnpublished)
     }
 
     private removeSignalListeners = () => {
@@ -598,6 +685,11 @@ export class PlayApp extends App {
         signal.off('mapZoomOut', this.zoomOut)
         signal.off('mapZoomDelta', this.zoomByDelta)
         signal.off('navigateToTile', this.navigateToTile)
+        signal.off('localMediaState', this.onLocalMediaState)
+        signal.off('viewModeChanged', this.onViewModeChanged)
+        signal.off('sendEmoji', this.onSendEmoji)
+        signal.off('remoteVideoPublished', this.onRemoteVideoPublished)
+        signal.off('remoteVideoUnpublished', this.onRemoteVideoUnpublished)
     }
 
     private onRequestSkin = () => {
@@ -662,9 +754,15 @@ export class PlayApp extends App {
     }
 
     private onProximityUpdate = (data: any) => {
+        const prevId = this.proximityId
         this.proximityId = data.proximityId
         if (this.proximityId) {
             this.player.checkIfShouldJoinChannel(this.player.currentTilePosition)
+        }
+        if (this.proximityId && this.proximityId !== prevId) {
+            signal.emit('proximityDetected', { proximityId: this.proximityId })
+        } else if (!this.proximityId && prevId) {
+            signal.emit('proximityLost', {})
         }
     }
 
@@ -678,6 +776,10 @@ export class PlayApp extends App {
         server.socket.on('disconnect', this.onDisconnect)
         server.socket.on('kicked', this.onKicked)
         server.socket.on('proximityUpdate', this.onProximityUpdate)
+        server.socket.on('remoteMediaState', this.onRemoteMediaState)
+        server.socket.on('callRequest', this.onCallRequest)
+        server.socket.on('callAccepted', this.onCallAccepted)
+        server.socket.on('callRejected', this.onCallRejected)
     }
 
     private removeSocketEvents = () => {
@@ -690,6 +792,22 @@ export class PlayApp extends App {
         server.socket.off('disconnect', this.onDisconnect)
         server.socket.off('kicked', this.onKicked)
         server.socket.off('proximityUpdate', this.onProximityUpdate)
+        server.socket.off('remoteMediaState', this.onRemoteMediaState)
+        server.socket.off('callRequest', this.onCallRequest)
+        server.socket.off('callAccepted', this.onCallAccepted)
+        server.socket.off('callRejected', this.onCallRejected)
+    }
+
+    private onCallRequest = (data: { fromUid: string; fromUsername: string; proximityId: string }) => {
+        signal.emit('incomingCall', data)
+    }
+
+    private onCallAccepted = (data: { proximityId: string; byUid: string }) => {
+        signal.emit('callAccepted', data)
+    }
+
+    private onCallRejected = (data: { byUid: string }) => {
+        signal.emit('callRejected', data)
     }
 
     private removeEvents = () => {

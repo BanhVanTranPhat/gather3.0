@@ -1,15 +1,15 @@
 'use client'
 import React, { useState } from 'react'
-import Dropdown from '@/components/Dropdown'
 import BasicButton from '@/components/BasicButton'
 import { createClient } from '@/utils/auth/client'
 import { toast } from 'react-toastify'
 import revalidate from '@/utils/revalidate'
 import { useModal } from '../hooks/useModal'
-import { Copy } from '@phosphor-icons/react'
+import { Copy, ArrowLeft } from '@phosphor-icons/react'
 import { v4 as uuidv4 } from 'uuid'
 import BasicInput from '@/components/BasicInput'
 import { removeExtraSpaces } from '@/utils/removeExtraSpaces'
+import { useRouter } from 'next/navigation'
 
 type ManageChildProps = {
     realmId: string
@@ -25,6 +25,7 @@ const ManageChild:React.FC<ManageChildProps> = ({ realmId, startingShareId, star
     const [onlyOwner, setOnlyOwner] = useState(startingOnlyOwner)
     const [name, setName] = useState(startingName)
     const { setModal, setLoadingText } = useModal()
+    const router = useRouter()
 
     const auth = createClient()
 
@@ -91,39 +92,85 @@ const ManageChild:React.FC<ManageChildProps> = ({ realmId, startingShareId, star
         setName(value)
     }
 
+    const tabs = [
+        { label: 'General', id: 0 },
+        { label: 'Sharing Options', id: 1 },
+    ]
+
     return (
-        <div className='flex flex-col items-center pt-24'>
-            <div className='flex flex-row gap-8 relative'>
-                <div className='flex flex-col h-[500px] w-[200px] border-white border-r-2 pr-4 gap-2'>
-                    <h1 className={`${selectedTab === 0 ? 'font-bold underline' : ''} cursor-pointer`} onClick={() => setSelectedTab(0)}>General</h1> 
-                    <h1 className={`${selectedTab === 1 ? 'font-bold underline' : ''} cursor-pointer`} onClick={() => setSelectedTab(1)}>Sharing Options</h1> 
+        <div className='min-h-screen bg-[#1a1b2e]'>
+            {/* Top bar */}
+            <div className='flex items-center gap-3 px-6 py-4 border-b border-[#2D3054]'>
+                <button
+                    type="button"
+                    onClick={() => router.push('/app')}
+                    className='p-2 rounded-lg hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors'
+                    title="Back to Spaces"
+                >
+                    <ArrowLeft className='w-5 h-5' />
+                </button>
+                <div>
+                    <h1 className='text-lg font-semibold text-white'>Manage Space</h1>
+                    <p className='text-xs text-[#8B8FA3]'>{startingName}</p>
                 </div>
-                <div className='flex flex-col w-[300px]'>
-                    {selectedTab === 0 && (
-                        <div className='flex flex-col gap-2'>
-                            Name
-                            <BasicInput value={name} onChange={onNameChange} maxLength={32}/>
+            </div>
+
+            <div className='max-w-3xl mx-auto px-6 py-8'>
+                <div className='flex gap-8'>
+                    {/* Sidebar tabs */}
+                    <div className='w-[180px] flex-shrink-0'>
+                        <div className='flex flex-col gap-1'>
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setSelectedTab(tab.id)}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                        selectedTab === tab.id
+                                            ? 'bg-[#6C72CB]/20 text-[#6C72CB]'
+                                            : 'text-[#8B8FA3] hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
-                    )}
-                    {selectedTab === 1 && (
-                        <div className='flex flex-col gap-2'>
-                            <BasicButton className='flex flex-row items-center gap-2 text-sm max-w-max' onClick={copyLink}>
-                                Copy Link <Copy />
-                            </BasicButton>
-                            <BasicButton className='flex flex-row items-center gap-2 text-sm max-w-max' onClick={generateNewLink}>
-                                Generate New Link <Copy />
-                            </BasicButton>
-                        </div>
-                    )}
-                    {selectedTab === 2 && (
-                        <div className='flex flex-col gap-2'>
-                            
-                        </div>
-                    )}
                     </div>
-                <BasicButton className='absolute bottom-[-50px] right-0' onClick={save}>
-                    Save
-                </BasicButton>
+
+                    {/* Content */}
+                    <div className='flex-1'>
+                        <div className='bg-[#252840] rounded-xl border border-[#3F4776]/40 p-6'>
+                            {selectedTab === 0 && (
+                                <div className='flex flex-col gap-4'>
+                                    <div>
+                                        <label className='block text-sm font-medium text-[#8B8FA3] mb-1.5'>Space Name</label>
+                                        <BasicInput value={name} onChange={onNameChange} maxLength={32} className='w-full' />
+                                    </div>
+                                </div>
+                            )}
+                            {selectedTab === 1 && (
+                                <div className='flex flex-col gap-3'>
+                                    <p className='text-sm text-[#8B8FA3] mb-1'>Share your space with others</p>
+                                    <div className='flex flex-wrap gap-3'>
+                                        <BasicButton className='flex flex-row items-center gap-2 text-sm' onClick={copyLink}>
+                                            <Copy className="w-4 h-4" /> Copy Link
+                                        </BasicButton>
+                                        <BasicButton className='flex flex-row items-center gap-2 text-sm' onClick={generateNewLink}>
+                                            <Copy className="w-4 h-4" /> Generate New Link
+                                        </BasicButton>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Save button */}
+                        <div className='flex justify-end mt-6'>
+                            <BasicButton onClick={save} className='px-8'>
+                                Save
+                            </BasicButton>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     )

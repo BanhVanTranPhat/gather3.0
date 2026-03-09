@@ -1,18 +1,18 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
-import BasicButton from '@/components/BasicButton'
 import DesktopRealmItem from './DesktopRealmItem'
-import { useRouter } from 'next/navigation'
 import { request } from '@/utils/backend/requests'
 import { createClient } from '@/utils/auth/client'
 import revalidate from '@/utils/revalidate'
+import { MagnifyingGlass } from '@phosphor-icons/react'
 
 type Realm = {
     id: string,
     name: string,
     share_id: string
     shared?: boolean
+    mapTemplate?: string
 }
 
 type RealmsMenuProps = {
@@ -22,9 +22,9 @@ type RealmsMenuProps = {
 
 const RealmsMenu:React.FC<RealmsMenuProps> = ({ realms, errorMessage }) => {
 
-    const [selectedRealm, setSelectedRealm] = useState<Realm | null>(null)
     const [playerCounts, setPlayerCounts] = useState<number[]>([])
-    const router = useRouter()
+    const [activeTab, setActiveTab] = useState<'visited' | 'created'>('visited')
+    const [search, setSearch] = useState('')
     const auth = createClient()
 
     useEffect(() => {
@@ -38,65 +38,91 @@ const RealmsMenu:React.FC<RealmsMenuProps> = ({ realms, errorMessage }) => {
         revalidate('/play/[id]')
     }, [])
 
-    function getLink() {
-        if (selectedRealm?.share_id) {
-            return `/play/${selectedRealm.id}?shareId=${selectedRealm.share_id}`
-        } else {
-            return `/play/${selectedRealm?.id}`
-        }
-    }
-
     async function getPlayerCounts() {
-        // get session
         const { data: { session } } = await auth.auth.getSession()
         if (!session) return
-        const { data: playerCountData, error: playerCountsError } = await request('/getPlayerCounts', { realmIds: realms.map((realm: any) => realm.id)}, session.access_token)
+        const { data: playerCountData } = await request('/getPlayerCounts', { realmIds: realms.map((realm: any) => realm.id)}, session.access_token)
         if (playerCountData) {
             setPlayerCounts(playerCountData.playerCounts)
         }
     }
 
+    const ownedRealms = realms.filter(r => !r.shared)
+    const visitedRealms = realms.filter(r => r.shared)
+
+    const displayRealms = activeTab === 'created' ? ownedRealms : realms
+    const searchLower = search.trim().toLowerCase()
+    const filteredRealms = searchLower
+        ? displayRealms.filter(r => r.name.toLowerCase().includes(searchLower))
+        : displayRealms
+
     return (
         <>
-            {/* Mobile View */}
-            <div className='flex flex-col items-center p-4 gap-2 sm:hidden'>
-                {realms.length === 0 && <p className='text-center'>You have no spaces you can join. Create one on desktop to get started!</p>}
-                {realms.map((realm, index) => {
+            {/* Tabs + Search row */}
+            <div className='flex items-center justify-between mb-6'>
+                <div className='flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1'>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('visited')}
+                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                            activeTab === 'visited'
+                                ? 'bg-gray-100 text-gray-900 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        Last Visited
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('created')}
+                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                            activeTab === 'created'
+                                ? 'bg-gray-100 text-gray-900 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        Created Spaces
+                    </button>
+                </div>
 
-                    function selectRealm() {
-                        setSelectedRealm(realm)
-                    }
-
-                    return (
-                        <BasicButton key={realm.id} className={`w-full h-12 border-4 border-transparent flex flex-row items-center justify-between ${selectedRealm?.id === realm.id ? 'border-white' : ''}`} onClick={selectRealm}>
-                            <p className='text-button text-xl text-left'>{realm.name}</p>
-                            {playerCounts[index] !== undefined && <div className='rounded-full grid place-items-center w-8 h-8 font-bold bg-green-500'>
-                                {playerCounts[index]}
-                            </div>}
-                        </BasicButton>
-                    )
-                })}
-                <div className='fixed bottom-0 w-full bg-primary grid place-items-center p-2'>
-                     <BasicButton className='w-[90%] text-xl px-0 py-0' disabled={selectedRealm === null} onClick={() => router.push(getLink())}>
-                        Join Space
-                    </BasicButton>
+                <div className='flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 w-56'>
+                    <MagnifyingGlass className="w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className='flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none'
+                    />
                 </div>
             </div>
 
-            {/* Desktop View */}
-            <div className='flex-col items-center w-full p-8 hidden sm:flex'>
-                {realms.length === 0 && <p className='text-center'>You have no spaces you can join. Create a space to get started!</p>}
-                <div className='hidden sm:grid grid-cols-2 md:grid-cols-3 gap-8 w-full'>
-                    {realms.map((realm, index) => {
+            {/* Space cards grid */}
+            {filteredRealms.length === 0 ? (
+                <div className='text-center py-16'>
+                    <p className='text-gray-500 text-sm'>
+                        {search ? 'No spaces match your search.' : 'No spaces yet. Create a space to get started!'}
+                    </p>
+                </div>
+            ) : (
+                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+                    {filteredRealms.map((realm, index) => {
+                        const originalIndex = realms.findIndex(r => r.id === realm.id)
                         return (
-                            <DesktopRealmItem key={realm.id} name={realm.name} id={realm.id} shareId={realm.share_id} shared={realm.shared} playerCount={playerCounts[index]}/>
+                            <DesktopRealmItem
+                                key={realm.id}
+                                name={realm.name}
+                                id={realm.id}
+                                shareId={realm.share_id}
+                                shared={realm.shared}
+                                playerCount={playerCounts[originalIndex]}
+                                mapTemplate={realm.mapTemplate}
+                            />
                         )
                     })}
                 </div>
-            </div>
-            
+            )}
         </>
-        
     )
 }
 

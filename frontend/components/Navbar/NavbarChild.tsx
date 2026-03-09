@@ -1,11 +1,9 @@
 'use client'
 import React, { useEffect } from 'react'
-import Link from 'next/link'
-import { PlusCircleIcon, ChatBubbleLeftRightIcon, ArrowRightEndOnRectangleIcon } from '@heroicons/react/24/outline'
 import { useModal } from '@/app/hooks/useModal'
 import { useProfile } from '@/app/contexts/ProfileContext'
-import BasicButton from '../BasicButton'
 import { UserAvatarDisplay } from '../UserAvatarDisplay'
+import { MagnifyingGlass, Plus, User } from '@phosphor-icons/react'
 
 type NavbarChildProps = {
     name: string
@@ -21,33 +19,48 @@ export const NavbarChild: React.FC<NavbarChildProps> = ({ name, avatar }) => {
     }, [avatar, name, setProfile])
 
     return (
-        <div className='h-16'>
-            <div className='w-full fixed bg-secondary flex flex-row items-center p-2 pl-8 justify-end sm:justify-between z-10'>
-                <div className='hidden sm:flex flex-row items-center gap-2'>
-                    <Link href="/app/chat" className="flex items-center gap-2 py-[10px] px-3 rounded-lg text-white hover:bg-light-secondary transition-colors">
-                        <ChatBubbleLeftRightIcon className='h-5 w-5' />
-                        Chat
-                    </Link>
-                    <BasicButton onClick={() => setModal('Join Realm')} className='flex flex-row items-center gap-2 py-[10px] !bg-transparent border border-[#3F4776] hover:!bg-white/5'>
+        <div className='h-14'>
+            <div className='w-full fixed bg-white border-b border-gray-200 flex items-center px-6 h-14 z-10'>
+                {/* Left section - Logo + Join Space */}
+                <div className='flex items-center gap-3'>
+                    {/* Logo */}
+                    <div className="w-8 h-8 bg-[#2b2d42] rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <circle cx="8" cy="8" r="3" fill="#fff"/>
+                            <circle cx="16" cy="8" r="3" fill="#fff"/>
+                            <circle cx="8" cy="16" r="3" fill="#fff"/>
+                            <circle cx="16" cy="16" r="3" fill="#fff"/>
+                            <circle cx="12" cy="12" r="2" fill="#fff" opacity="0.6"/>
+                        </svg>
+                    </div>
+
+                    <button
+                        onClick={() => setModal('Join Realm')}
+                        className='px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors'
+                    >
                         Join Space
-                        <ArrowRightEndOnRectangleIcon className='h-5'/>
-                    </BasicButton>
-                    <BasicButton onClick={() => setModal('Create Realm')} className='flex flex-row items-center gap-2 py-[10px]'>
-                        Create Space
-                        <PlusCircleIcon className='h-5'/>
-                    </BasicButton>
+                    </button>
                 </div>
-                <div
-                    className='flex flex-row items-center gap-4 hover:bg-light-secondary animate-colors rounded-full cursor-pointer py-1 px-1 select-none'
-                    onClick={() => setModal('Account Dropdown')}
-                >
-                    <p className='text-white'>{name}</p>
-                    <UserAvatarDisplay
-                        avatar={avatar ?? undefined}
-                        displayName={name}
-                        size="md"
-                        className='ring-2 ring-white/20 ring-offset-2 ring-offset-secondary'
-                    />
+
+                {/* Right section */}
+                <div className='flex items-center gap-3 ml-auto'>
+                    {/* Account */}
+                    <button
+                        onClick={() => setModal('Account Dropdown')}
+                        className='flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors'
+                    >
+                        <User className="w-4 h-4" />
+                        Account
+                    </button>
+
+                    {/* Create Space */}
+                    <button
+                        onClick={() => setModal('Create Realm')}
+                        className='flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shadow-sm'
+                    >
+                        <Plus className="w-4 h-4" weight="bold" />
+                        Create Space
+                    </button>
                 </div>
             </div>
         </div>

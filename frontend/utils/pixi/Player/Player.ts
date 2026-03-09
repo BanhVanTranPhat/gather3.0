@@ -70,6 +70,16 @@ export class Player {
     private avatarConfig?: Record<string, string>
 
     private currentChannel: string = 'local'
+    private mediaContainer: PIXI.Container = new PIXI.Container()
+    public micOn: boolean = false
+    public camOn: boolean = false
+
+    private videoBubble: PIXI.Container | null = null
+    private videoSprite: PIXI.Sprite | null = null
+    private videoSource: any = null
+    private videoElement: HTMLVideoElement | null = null
+    private mediaStream: MediaStream | null = null
+    private hasRemoteVideoTrack: boolean = false
 
     constructor(skin: string, playApp: PlayApp, username: string, isLocal: boolean = false, avatarConfig?: Record<string, string>) {
         this.skin = skin || defaultSkin
@@ -192,7 +202,209 @@ export class Player {
         if (this.initialized) return
         await this.loadAnimations()
         this.addUsername()
+        this.mediaContainer.y = -38
+        this.parent.addChild(this.mediaContainer)
         this.initialized = true
+    }
+
+    public setMediaState(micOn: boolean, camOn: boolean) {
+        this.micOn = micOn
+        this.camOn = camOn
+        this.mediaContainer.removeChildren()
+
+        if (micOn && !camOn) {
+            const g = new PIXI.Graphics()
+            g.roundRect(-4, -4, 8, 8, 2)
+            g.fill(0x22c55e)
+            g.circle(0, -1, 2)
+            g.fill(0xffffff)
+            g.rect(-0.5, 1, 1, 2)
+            g.fill(0xffffff)
+            this.mediaContainer.addChild(g)
+        }
+
+        if (camOn && this.isLocal) {
+            // Local camera bubble is created by PlayApp via showLocalCamera()
+        } else if (!camOn && this.isLocal) {
+            this.stopCamera()
+        } else if (camOn && !this.isLocal) {
+            if (!this.hasRemoteVideoTrack && !this.videoBubble) {
+                this.showRemoteCamBubble()
+            }
+        } else if (!camOn && !this.isLocal) {
+            this.hasRemoteVideoTrack = false
+            this.stopCamera()
+        }
+    }
+
+    private static readonly BUBBLE_R = 18
+    private static readonly BUBBLE_Y = -56
+
+    private showRemoteCamBubble() {
+        if (this.videoBubble) return
+        const R = Player.BUBBLE_R
+        const bubble = new PIXI.Container()
+        bubble.y = Player.BUBBLE_Y
+
+        const border = new PIXI.Graphics()
+        border.circle(0, 0, R + 1.5)
+        border.fill(0x3b82f6)
+        bubble.addChild(border)
+
+        const bg = new PIXI.Graphics()
+        bg.circle(0, 0, R)
+        bg.fill(0x1E2035)
+        bubble.addChild(bg)
+
+        const initial = new PIXI.Text({
+            text: this.username.charAt(0).toUpperCase(),
+            style: { fontFamily: 'silkscreen', fontSize: 128, fill: 0xffffff },
+        })
+        initial.anchor.set(0.5)
+        initial.scale.set(0.12)
+        initial.y = -2
+        bubble.addChild(initial)
+
+        this.parent.addChild(bubble)
+        this.videoBubble = bubble
+    }
+
+    public showLocalCamera(mediaStreamTrack: MediaStreamTrack) {
+        if (this.videoBubble) return
+        try {
+            const stream = new MediaStream([mediaStreamTrack])
+            const video = document.createElement('video')
+            video.srcObject = stream
+            video.autoplay = true
+            video.muted = true
+            video.playsInline = true
+            video.width = 128
+            video.height = 128
+            video.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none'
+            document.body.appendChild(video)
+            video.play().catch(() => {})
+            this.videoElement = video
+
+            this.buildVideoBubble(video, 0x6C72CB)
+        } catch (e) {
+            console.warn('showLocalCamera failed, falling back to getUserMedia:', e)
+            this.startCamera()
+        }
+    }
+
+    public setRemoteVideoFromTrack(track: any) {
+        try {
+            const mediaTrack: MediaStreamTrack = track.getMediaStreamTrack()
+            if (!mediaTrack) return
+            const stream = new MediaStream([mediaTrack])
+
+            this.stopCamera()
+            this.hasRemoteVideoTrack = true
+
+            const video = document.createElement('video')
+            video.srcObject = stream
+            video.autoplay = true
+            video.muted = true
+            video.playsInline = true
+            video.width = 128
+            video.height = 128
+            video.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none'
+            document.body.appendChild(video)
+            video.play().catch(() => {})
+            this.videoElement = video
+
+            this.buildVideoBubble(video, 0x3b82f6)
+        } catch (e) {
+            console.warn('Failed to set remote video track:', e)
+        }
+    }
+
+    public clearRemoteVideo() {
+        this.hasRemoteVideoTrack = false
+        this.stopCamera()
+    }
+
+    private async startCamera() {
+        if (this.videoBubble) return
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 128, height: 128, facingMode: 'user' },
+                audio: false,
+            })
+            this.mediaStream = stream
+
+            const video = document.createElement('video')
+            video.srcObject = stream
+            video.autoplay = true
+            video.muted = true
+            video.playsInline = true
+            video.width = 128
+            video.height = 128
+            video.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none'
+            document.body.appendChild(video)
+            await video.play()
+            this.videoElement = video
+
+            this.buildVideoBubble(video, 0x6C72CB)
+        } catch (e) {
+            console.warn('Failed to start camera:', e)
+        }
+    }
+
+    private buildVideoBubble(video: HTMLVideoElement, borderColor: number) {
+        const R = Player.BUBBLE_R
+        const bubble = new PIXI.Container()
+        bubble.y = Player.BUBBLE_Y
+
+        const border = new PIXI.Graphics()
+        border.circle(0, 0, R + 1.5)
+        border.fill(borderColor)
+        bubble.addChild(border)
+
+        const maskGfx = new PIXI.Graphics()
+        maskGfx.circle(0, 0, R)
+        maskGfx.fill(0xffffff)
+        bubble.addChild(maskGfx)
+
+        const videoSrc = new PIXI.VideoSource({
+            resource: video,
+            autoPlay: true,
+            updateFPS: 15,
+        })
+        this.videoSource = videoSrc
+        const tex = new PIXI.Texture({ source: videoSrc })
+        const sprite = new PIXI.Sprite(tex)
+        sprite.anchor.set(0.5)
+        sprite.width = R * 2
+        sprite.height = R * 2
+        sprite.mask = maskGfx
+        bubble.addChild(sprite)
+        this.videoSprite = sprite
+
+        this.parent.addChild(bubble)
+        this.videoBubble = bubble
+    }
+
+    private stopCamera() {
+        if (this.videoBubble) {
+            this.parent.removeChild(this.videoBubble)
+            this.videoBubble.destroy({ children: true })
+            this.videoBubble = null
+            this.videoSprite = null
+        }
+        if (this.videoSource) {
+            this.videoSource.destroy()
+            this.videoSource = null
+        }
+        if (this.videoElement) {
+            this.videoElement.srcObject = null
+            this.videoElement.remove()
+            this.videoElement = null
+        }
+        if (this.mediaStream) {
+            this.mediaStream.getTracks().forEach(t => t.stop())
+            this.mediaStream = null
+        }
     }
 
     public setPosition(x: number, y: number) {
@@ -443,5 +655,6 @@ export class Player {
 
     public destroy() {
         PIXI.Ticker.shared.remove(this.move)
+        this.stopCamera()
     }
 }

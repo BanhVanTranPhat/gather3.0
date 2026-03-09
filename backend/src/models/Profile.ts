@@ -8,6 +8,7 @@ export interface IProfile extends Document {
   displayName?: string
   bio?: string
   visited_realms?: string[]
+  lastPositions?: Map<string, { x: number; y: number; room: number }>
   updatedAt?: Date
 }
 
@@ -20,6 +21,7 @@ const profileSchema = new Schema<IProfile>(
     displayName: { type: String, maxlength: 100 },
     bio: { type: String, default: '', maxlength: 500 },
     visited_realms: { type: [String], default: [], validate: [(v: string[]) => v.length <= 500, 'Too many visited realms'] },
+    lastPositions: { type: Map, of: new Schema({ x: Number, y: Number, room: Number }, { _id: false }), default: new Map() },
   },
   { timestamps: true }
 )

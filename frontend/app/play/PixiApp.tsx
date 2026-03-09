@@ -29,11 +29,15 @@ const PixiApp:React.FC<PixiAppProps> = ({ className, mapData, username, access_t
             appRef.current = app
             setModal('Loading')
             setLoadingText('Connecting to server...')
-            const { success, errorMessage } = await server.connect(realmId, uid, shareId, access_token)
+            const { success, errorMessage, savedPosition } = await server.connect(realmId, uid, shareId, access_token)
             if (!success) {
                 setErrorModal('Failed To Connect')
                 setFailedConnectionMessage(errorMessage)
                 return
+            }
+
+            if (savedPosition) {
+                app.savedPosition = savedPosition
             }
 
             setLoadingText('Loading game...')

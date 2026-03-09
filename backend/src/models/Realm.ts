@@ -6,6 +6,7 @@ export interface IRealm extends Document {
   owner_id: string
   name: string
   map_data?: unknown
+  mapTemplate?: string
   share_id?: string
   only_owner?: boolean
   createdAt?: Date
@@ -18,6 +19,7 @@ const realmSchema = new Schema<IRealm>(
     owner_id: { type: String, required: true },
     name: { type: String, required: true, maxlength: 200 },
     map_data: { type: Schema.Types.Mixed },
+    mapTemplate: { type: String, default: 'office' },
     share_id: { type: String, sparse: true, index: true },
     only_owner: { type: Boolean, default: false },
   },

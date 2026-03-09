@@ -23,4 +23,18 @@ export const ChangedSkin = z.string()
 
 export const NewMessage = z.string()
 
+export const MediaState = z.object({
+    micOn: z.boolean(),
+    camOn: z.boolean(),
+})
+
+export const CallRequest = z.object({
+    targetUid: z.string(),
+})
+
+export const CallResponse = z.object({
+    callerUid: z.string(),
+    accept: z.boolean(),
+})
+
 export type OnEventCallback = (args: { session: Session, data?: any }) => void
