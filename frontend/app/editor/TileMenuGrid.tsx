@@ -48,15 +48,18 @@ const TileMenuGrid:React.FC<TileMenuGridProps> = ({ selectedPalette, selectedTil
     const tilesToDisplay = getTiles()
 
     return (
-        <div className='w-full h-[400px] overflow-y-scroll border-b-2 border-primary pb-2 transparent-scrollbar'>
-            {tilesToDisplay.length === 0 && <div className='text-center text-white'>No tiles in this category.</div>}
+        <div className='w-full h-[380px] overflow-y-auto rounded-lg bg-white/5 p-2 transparent-scrollbar'>
+            {tilesToDisplay.length === 0 && (
+                <div className='h-full grid place-items-center'>
+                    <p className='text-sm text-gray-500'>No tiles in this layer</p>
+                </div>
+            )}
             {!loading && (
-                <div className='grid grid-cols-3 w-full gap-2 pt-2'>
+                <div className='grid grid-cols-3 w-full gap-1.5'>
                     {tilesToDisplay}
                 </div>
             )}
         </div>
-        
     )
 }
 

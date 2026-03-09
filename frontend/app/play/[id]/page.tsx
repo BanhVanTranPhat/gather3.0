@@ -6,9 +6,9 @@ import { getPlayRealmData } from '@/utils/backend/getPlayRealmData'
 import PlayClient from '../PlayClient'
 import { updateVisitedRealms } from '@/utils/backend/updateVisitedRealms'
 import { formatEmailToName } from '@/utils/formatEmailToName'
+import { defaultSkin } from '@/utils/pixi/Player/skins'
 
 export default async function Play({ params, searchParams }: { params: { id: string }, searchParams: { shareId: string } }) {
-
     const auth = await createClient()
     const { data: { session } } = await auth.auth.getSession()
     const { data: { user } } = await auth.auth.getUser()
@@ -16,34 +16,55 @@ export default async function Play({ params, searchParams }: { params: { id: str
     if (!session || !user) {
         return redirect('/signin')
     }
-    const { data, error } = !searchParams.shareId ? await auth.from('realms').select('map_data, owner_id, name').eq('id', params.id).single() : await getPlayRealmData(session.access_token, searchParams.shareId)
-    const { data: profile, error: profileError } = await auth.from('profiles').select('skin').eq('id', user.id).single()
-    // Show not found page if no data is returned
-    if (!data || !profile) {
-        const message = (error as { message?: string } | null)?.message || (profileError as { message?: string } | null)?.message || ''
 
-        return <NotFound specialMessage={message}/>
+    const { data, error } = !searchParams.shareId
+        ? await auth.from('realms').select('map_data, owner_id, name').eq('id', params.id).single()
+        : await getPlayRealmData(session.access_token, searchParams.shareId)
+
+    const { data: profile, error: profileError } = await auth
+        .from('profiles')
+        .select('skin, avatarConfig, displayName')
+        .eq('id', user.id)
+        .single()
+
+    if (!data || !profile) {
+        const message =
+            (error as { message?: string } | null)?.message ||
+            (profileError as { message?: string } | null)?.message ||
+            ''
+        return <NotFound specialMessage={message} />
     }
 
     const realm = data
-    const map_data = realm.map_data
+    const map_data = realm.map_data ?? {
+        spawnpoint: { roomIndex: 0, x: 0, y: 0 },
+        rooms: [{ name: 'New Room', tilemap: {} }],
+    }
 
-    let skin = profile.skin
+    const skin = profile.skin || defaultSkin
+    const avatarConfig = profile.avatarConfig || null
+    const username =
+        profile.displayName?.trim() ||
+        (user.user_metadata?.email ? formatEmailToName(user.user_metadata.email) : 'Player')
 
-    if (searchParams.shareId && realm.owner_id !== user.id) {
-        updateVisitedRealms(session.access_token, searchParams.shareId)
+    const effectiveShareId = searchParams.shareId || realm.share_id || ''
+
+    if (effectiveShareId && realm.owner_id !== user.id) {
+        updateVisitedRealms(session.access_token, effectiveShareId)
     }
 
     return (
-        <PlayClient 
-            mapData={map_data} 
-            username={formatEmailToName(user.user_metadata.email)} 
-            access_token={session.access_token} 
-            realmId={params.id} 
-            uid={user.id} 
-            shareId={searchParams.shareId || ''} 
+        <PlayClient
+            mapData={map_data}
+            username={username}
+            access_token={session.access_token}
+            realmId={realm.id || params.id}
+            uid={user.id}
+            ownerId={realm.owner_id}
+            shareId={effectiveShareId}
             initialSkin={skin}
             name={realm.name}
+            avatarConfig={avatarConfig}
         />
     )
 }

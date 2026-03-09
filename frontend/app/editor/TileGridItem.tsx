@@ -42,11 +42,19 @@ const TileGridItem: React.FC<TileGridItemProps> = ({ sheetName, spriteName, sele
     }
 
     return (
-        <div className={`${spriteName === 'empty' ? 'pointer-events-none' : ''} w-full aspect-square hover:bg-light-secondary cursor-pointer rounded-lg flex flex-col items-center justify-between animate-colors ${selected ? 'bg-light-secondary' : ''}`} onClick={onClick}>
+        <div
+            className={`
+                ${spriteName === 'empty' ? 'pointer-events-none opacity-0' : ''}
+                w-full aspect-square cursor-pointer rounded-lg flex flex-col items-center justify-center
+                transition-all duration-150 group relative
+                ${selected ? 'bg-white/15 ring-1 ring-quaternary/50 shadow-sm' : 'hover:bg-white/10'}
+            `}
+            onClick={onClick}
+            title={spriteName !== 'empty' ? spriteName.replace(/_/g, ' ') : ''}
+        >
             <div className='w-full grow grid place-items-center'>
                 <TileOrEmpty />
             </div>
-            {/* <p className='text-sm'>{sprite}</p> */}
         </div>
     )
 }

@@ -24,7 +24,7 @@ router.get('/realms', async (req: Request, res: Response) => {
   const user = auth(req)
   if (!user) return res.status(401).json({ message: 'Unauthorized' })
   const owned = await Realm.find({ owner_id: user.id }).select('id name share_id').lean()
-  return res.json(owned.map((r) => ({ id: (r as any)._id?.toString() || r.id, name: r.name, share_id: r.share_id })))
+  return res.json(owned.map((r) => ({ id: (r as any).id || (r as any)._id?.toString(), name: r.name, share_id: r.share_id })))
 })
 
 router.get('/realms/by-share/:shareId', async (req: Request, res: Response) => {

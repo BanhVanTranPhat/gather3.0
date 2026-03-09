@@ -18,7 +18,10 @@ const SkinMenu:React.FC<SkinMenuProps> = () => {
 
     const { modal, setModal } = useModal()
 
-    const [skinIndex, setSkinIndex] = useState<number>(skins.indexOf(defaultSkin))
+    const [skinIndex, setSkinIndex] = useState<number>(() => {
+        const i = skins.indexOf(defaultSkin)
+        return i >= 0 ? i : 0
+    })
     const [loading, setLoading] = useState(false)
 
     const auth = createClient()
@@ -33,7 +36,8 @@ const SkinMenu:React.FC<SkinMenuProps> = () => {
 
     useEffect(() => {
         const onGotSkin = (skin: string) => {
-            setSkinIndex(skins.indexOf(skin))
+            const i = skins.indexOf(skin)
+            setSkinIndex(i >= 0 ? i : 0)
         }
 
         signal.on('skin', onGotSkin)
@@ -59,6 +63,7 @@ const SkinMenu:React.FC<SkinMenuProps> = () => {
         }
 
         revalidate('/play/[id]')
+        revalidate('/app')
         signal.emit('switchSkin', newSkin)
         setModal('None')
     }
@@ -73,7 +78,7 @@ const SkinMenu:React.FC<SkinMenuProps> = () => {
         <Modal open={modal === 'Skin'} closeOnOutsideClick>
             <div className='w-96 h-96 flex flex-col items-center justify-between pt-8'>
                 <p>{skinIndex + 1} / {skins.length}</p>
-                <AnimatedCharacter src={`/sprites/characters/Character_${skins[skinIndex]}.png`} className='w-48'/>
+                <AnimatedCharacter src={`/sprites/characters/Character_${skins[skinIndex] ?? defaultSkin}.png`} className='w-48'/>
                 <div className='flex flex-row items-center justify-center gap-4 mb-12'>
                     <button className='hover:bg-light-secondary animate-colors aspect-square grid place-items-center rounded-lg p-1 outline-none' onClick={decrement}>
                         <ArrowFatLeft className='h-12 w-12'/>

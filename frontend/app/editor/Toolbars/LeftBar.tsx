@@ -64,53 +64,60 @@ const LeftBar:React.FC<LeftBarProps> = ({ tool, tileMode, selectTool, selectTile
     }, [])
 
     return (
-        <div className='w-[48px] bg-secondary flex flex-col items-center py-1 gap-2'>
+        <div className='w-[52px] bg-[#1e2240] flex flex-col items-center py-2 gap-1 border-r border-black/20'>
             <ToolButton selected={tool === 'Hand'} label={'Hand'} onClick={() => selectTool('Hand')}>
-                <HandRaisedIcon className='h-8 w-8 text-white'/>
+                <HandRaisedIcon className='h-6 w-6'/>
             </ToolButton>
             <ToolButton selected={tool === 'ZoomIn'} label={'Zoom In'} onClick={() => selectTool('ZoomIn')}>
-                <MagnifyingGlassPlusIcon className='h-8 w-8 text-white'/>
+                <MagnifyingGlassPlusIcon className='h-6 w-6'/>
             </ToolButton>
             <ToolButton selected={tool === 'ZoomOut'} label={'Zoom Out'} onClick={() => selectTool('ZoomOut')}>
-                <MagnifyingGlassMinusIcon className='h-8 w-8 text-white'/>
+                <MagnifyingGlassMinusIcon className='h-6 w-6'/>
             </ToolButton>
             <ToolButton selected={tool === 'Eraser'} label={'Eraser'} onClick={() => selectTool('Eraser')}>
-                <Eraser className='h-8 w-8'/>
+                <Eraser className='h-6 w-6'/>
             </ToolButton>
-            <div className='w-full h-[2px] bg-black'/>
+
+            <div className='w-7 h-px bg-white/10 my-1' />
+
             <ToolButton selected={tileMode === 'Single'} label={'Single Tile'} onClick={() => selectTileMode('Single')}>
-                <Square className='h-8 w-8'/>
+                <Square className='h-6 w-6'/>
             </ToolButton>
             <ToolButton selected={tileMode === 'Rectangle'} label={'Rectangle'} onClick={() => selectTileMode('Rectangle')}>
-                <GridFour className='h-8 w-8'/>
+                <GridFour className='h-6 w-6'/>
             </ToolButton>
-            <div className='w-full h-[2px] bg-black'/>
-            <ToolButton selected={false} onClick={toggleShowGizmos} label={'Toggle Special Tiles'} className={specialTile !== 'None' ? 'pointer-events-none text-gray-500' : ''}>
-                {showGizmos ? <EyeSlash className='h-8 w-8'/> : <Eye className='h-8 w-8'/>}
+
+            <div className='w-7 h-px bg-white/10 my-1' />
+
+            <ToolButton selected={false} onClick={toggleShowGizmos} label={'Toggle Special Tiles'} className={specialTile !== 'None' ? 'pointer-events-none opacity-30' : ''}>
+                {showGizmos ? <EyeSlash className='h-6 w-6'/> : <Eye className='h-6 w-6'/>}
             </ToolButton>
-            <div className='w-full h-[2px] bg-black'/>
+
+            <div className='w-7 h-px bg-white/10 my-1' />
+
             <ToolButton selected={false} label={'Undo'} onClick={undo} disabled={!undoEnabled}>
-                <ArrowUUpLeft className='h-8 w-8'/>
+                <ArrowUUpLeft className='h-6 w-6'/>
             </ToolButton>
             <ToolButton selected={false} label={'Redo'} onClick={redo} disabled={!redoEnabled}>
-                <ArrowUUpRight className='h-8 w-8'/>
+                <ArrowUUpRight className='h-6 w-6'/>
             </ToolButton>
-            <div className='w-full h-[2px] bg-black'/>
+
             {tool === 'Eraser' && (
-                <div className='flex flex-col gap-2'>
+                <>
+                    <div className='w-7 h-px bg-white/10 my-1' />
                     <ToolButton selected={eraserLayer === 'floor'} label={'Erase Floor'} onClick={() => selectEraserLayer('floor')}>
-                        <Wall className='h-8 w-8'/>
+                        <Wall className='h-6 w-6'/>
                     </ToolButton>
                     <ToolButton selected={eraserLayer === 'above_floor'} label={'Erase Above Floor'} onClick={() => selectEraserLayer('above_floor')}>
-                        <FlowerTulip className='h-8 w-8'/>
+                        <FlowerTulip className='h-6 w-6'/>
                     </ToolButton>
                     <ToolButton selected={eraserLayer === 'object'} label={'Erase Objects'} onClick={() => selectEraserLayer('object')}>
-                        <Couch className='h-8 w-8'/>
+                        <Couch className='h-6 w-6'/>
                     </ToolButton>
                     <ToolButton selected={eraserLayer === 'gizmo'} label={'Erase Special Tiles'} onClick={() => selectEraserLayer('gizmo')}>
-                        <Atom className='h-8 w-8'/>
+                        <Atom className='h-6 w-6'/>
                     </ToolButton>
-                </div>
+                </>
             )}
         </div>
     )

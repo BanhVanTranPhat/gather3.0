@@ -1,6 +1,8 @@
 import React from 'react'
 import { ModalProvider } from '@/app/hooks/useModal'
+import { ProfileProvider } from '@/app/contexts/ProfileContext'
 import ModalParent from '../Modal/ModalParent'
+import ThemeSwitcher from '../ThemeSwitcher'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -12,9 +14,12 @@ const Layout:React.FC<LayoutProps> = ({ children }) => {
 
     return (
         <ModalProvider>
-            <ToastContainer theme='colored' pauseOnHover={false}/>
-            <ModalParent />
-            {children}
+            <ProfileProvider>
+                <ThemeSwitcher />
+                <ToastContainer theme='colored' pauseOnHover={false}/>
+                <ModalParent />
+                {children}
+            </ProfileProvider>
         </ModalProvider>
     )
 }

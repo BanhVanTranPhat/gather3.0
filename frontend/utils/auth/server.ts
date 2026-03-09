@@ -88,8 +88,12 @@ export async function createClient() {
           return this
         },
         single: async () => {
-          const data = await run()
-          return { data: Array.isArray(data) ? data[0] : data, error: null }
+          try {
+            const data = await run()
+            return { data: Array.isArray(data) ? data[0] : data, error: null }
+          } catch (e: any) {
+            return { data: null, error: { message: e?.message || 'Request failed' } }
+          }
         },
         insert(obj: any) {
           method = 'POST'

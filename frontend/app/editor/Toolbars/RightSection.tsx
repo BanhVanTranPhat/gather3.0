@@ -26,23 +26,31 @@ const RightSection:React.FC<RightSectionProps> = ({ selectedTile, setSelectedTil
     const [tab, setTab] = useState<Tab>('Tile')
 
     return (
-        <div className='w-[400px] bg-secondary flex flex-col select-none'>
-            <div className='flex flex-row h-10 px-2 pt-[4px]'>
-                <div 
-                    className={`grow hover:bg-darkblue animate-colors rounded-t-md cursor-pointer grid place-items-center select-none ${tab === 'Tile' ? 'pointer-events-none bg-light-secondary' : 'bg-secondary'}`}
+        <div className='w-[360px] bg-[#1e2240] flex flex-col select-none border-l border-black/20'>
+            <div className='flex h-10 px-2 pt-1 gap-1'>
+                <button
+                    className={`flex-1 text-sm font-medium rounded-t-lg grid place-items-center transition-all ${
+                        tab === 'Tile'
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
                     onClick={() => setTab('Tile')}
                 >
                     Tiles
-                </div>
-                <div 
-                    className={`grow hover:bg-darkblue animate-colors rounded-t-md cursor-pointer grid place-items-center select-none ${tab === 'Special Tiles' ? 'pointer-events-none bg-light-secondary' : 'bg-secondary'}`}
+                </button>
+                <button
+                    className={`flex-1 text-sm font-medium rounded-t-lg grid place-items-center transition-all ${
+                        tab === 'Special Tiles'
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
                     onClick={() => setTab('Special Tiles')}
                 >
                     Special Tiles
-                </div>
+                </button>
             </div>
-            <div className='bg-light-secondary h-[4px]'/>
-        <div>
+            <div className='h-px bg-white/10'/>
+            <div className='flex-1 overflow-hidden'>
                 {tab === 'Tile' && (
                     <TileMenu 
                         selectedTile={selectedTile} 

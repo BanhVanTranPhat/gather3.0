@@ -2,9 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
+/* App (dashboard, play, editor) dùng nền tối */
+html.app-theme {
     background: #282D4E;
     color: white;
+}
+
+/* Trang auth & landing dùng nền sáng, không đặt .app-theme */
+html:not(.app-theme) {
+    background: #f8fafc;
+    color: #0f172a;
 }
 
 .transparent-scrollbar::-webkit-scrollbar {
@@ -92,4 +99,34 @@ input[type=number]::-webkit-outer-spin-button {
     to {
         transform: translateY(-100%);
     }
+}
+
+/* Landing page animations */
+.animate-blob {
+    animation: blob 7s infinite;
+}
+.animate-bounce-slow {
+    animation: bounce-slow 8s ease-in-out infinite;
+}
+.animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+.animation-delay-1000 {
+    animation-delay: 1s;
+}
+.animation-delay-2000 {
+    animation-delay: 2s;
+}
+@keyframes blob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+@keyframes bounce-slow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }

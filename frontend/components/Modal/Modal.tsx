@@ -16,7 +16,7 @@ const Modal: React.FC<ModalProps> = ({ children, className, open, closeOnOutside
 
   return (
     <Transition.Root show={open} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={closeOnOutsideClick ? () => setModal('None') : () => {}}>
+      <Dialog as="div" className="relative z-50" onClose={closeOnOutsideClick ? () => setModal('None') : () => {}}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -26,21 +26,21 @@ const Modal: React.FC<ModalProps> = ({ children, className, open, closeOnOutside
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
 
-        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-          <div className="flex min-h-full justify-center text-center items-center p-0">
+        <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+          <div className="flex min-h-full justify-center text-center items-center p-4">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 translate-y-0 scale-95"
+              enterFrom="opacity-0 translate-y-4 scale-95"
               enterTo="opacity-100 translate-y-0 scale-100"
               leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 translate-y-0 scale-95"
+              leaveFrom="opacity-100 translate-y-0 scale-100"
+              leaveTo="opacity-0 translate-y-4 scale-95"
             >
-              <Dialog.Panel className={`relative transform overflow-hidden rounded-lg text-left shadow-xl transition-all my-8 max-w-sm bg-secondary ${className}`}>
+              <Dialog.Panel tabIndex={0} className={`relative transform overflow-hidden rounded-xl text-left shadow-2xl transition-all my-8 w-full max-w-md bg-secondary ${className}`}>
                 {children}
               </Dialog.Panel>
             </Transition.Child>

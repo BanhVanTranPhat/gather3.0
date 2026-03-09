@@ -22,9 +22,9 @@ const Dropdown:React.FC<DropdownProps> = ({ items, selectedItem, setSelectedItem
   return (
     <Menu as="div" className="relative inline-block text-left">
       <div>
-        <Menu.Button className={`inline-flex w-64 justify-between bg-darkblue px-3 text-sm font-semibold text-white shadow-sm capitalize ${getAlternateStyles()}`}>
+        <Menu.Button className={`inline-flex w-48 justify-between items-center bg-white/10 hover:bg-white/15 px-3 py-1.5 text-sm font-medium text-white rounded-lg transition-colors capitalize ${getAlternateStyles()}`}>
           {selectedItem}
-          <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" aria-hidden="true" />
+          <ChevronDownIcon className="-mr-1 h-4 w-4 text-gray-400" aria-hidden="true" />
         </Menu.Button>
       </div>
       <Transition
@@ -36,13 +36,17 @@ const Dropdown:React.FC<DropdownProps> = ({ items, selectedItem, setSelectedItem
         leaveFrom="transform opacity-100 scale-100"
         leaveTo="transform opacity-0 scale-95"
       >
-        <Menu.Items className="absolute right-0 z-10 w-64 origin-top-right bg-secondary shadow-lg focus:outline-none">
+        <Menu.Items className="absolute right-0 z-20 w-48 mt-1 origin-top-right bg-[#1a1e38] border border-white/10 rounded-lg shadow-xl focus:outline-none overflow-hidden">
           <div>
             {items.map((item) => (
                 <Menu.Item key={item}>
                     {() => (
                         <div
-                            className={`block px-3 text-sm capitalize cursor-pointer text-white bg-darkblue hover:bg-light-secondary ${getAlternateStyles()}`}
+                            className={`block px-3 py-2 text-sm capitalize cursor-pointer transition-colors ${
+                                selectedItem === item
+                                    ? 'text-white bg-white/10'
+                                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                            } ${getAlternateStyles()}`}
                             onClick={() => setSelectedItem(item)}
                         >
                             {item}

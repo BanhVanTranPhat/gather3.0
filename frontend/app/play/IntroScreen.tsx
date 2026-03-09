@@ -1,62 +1,37 @@
 'use client'
 import React from 'react'
 import BasicButton from '@/components/BasicButton'
-import AnimatedCharacter from './SkinMenu/AnimatedCharacter'
-import { useVideoChat } from '../hooks/useVideoChat'
-import MicAndCameraButtons from '@/components/VideoChat/MicAndCameraButtons'
+import AvatarPreview from '@/components/AvatarPreview'
+import { DEFAULT_AVATAR_CONFIG } from '@/utils/avatarAssets'
 
 type IntroScreenProps = {
     realmName: string
     skin: string
     username: string
     setShowIntroScreen: (show: boolean) => void
+    avatarConfig?: Record<string, string> | null
 }
 
-const IntroScreen:React.FC<IntroScreenProps> = ({ realmName, skin, username, setShowIntroScreen }) => {
-
-    const src = '/sprites/characters/Character_' + skin + '.png'
+const IntroScreen:React.FC<IntroScreenProps> = ({ realmName, skin, username, setShowIntroScreen, avatarConfig }) => {
+    const config = avatarConfig && Object.keys(avatarConfig).length > 0 ? { ...DEFAULT_AVATAR_CONFIG, ...avatarConfig } : DEFAULT_AVATAR_CONFIG
 
     return (
-        <main className='dark-gradient w-full h-screen flex flex-col items-center pt-28'>
-            <h1 className='text-4xl font-semibold'>Welcome to <span className='text-[#CAD8FF]'>{realmName}</span></h1>
-            <section className='flex flex-row mt-32 items-center gap-24'>
-                <div className='flex flex-col items-center gap-4'>
-                    <div className='aspect-video w-[337px] h-[227px] bg-black rounded-xl border-2 border-[#3F4776] overflow-hidden'>
-                        <LocalVideo/>
+        <main className='dark-gradient w-full h-screen flex flex-col items-center justify-center'>
+            <h1 className='text-4xl font-semibold mb-16'>Welcome to <span className='text-[#CAD8FF]'>{realmName}</span></h1>
+            <div className='flex flex-col items-center gap-6'>
+                <div className='w-24 h-24 flex items-center justify-center overflow-hidden' style={{ imageRendering: 'pixelated' }}>
+                    <div style={{ transform: 'scale(1.5)', transformOrigin: 'center center' }}>
+                        <AvatarPreview avatarConfig={config} size={64} />
                     </div>
-                    <MicAndCameraButtons/>
                 </div>
-                <div className='flex flex-col items-center gap-4'>
-                    <div className='flex flex-row items-center'>
-                        <AnimatedCharacter src={src} noAnimation/>
-                        <p className='relative top-4'>{username}</p>
-                    </div>
-                    <BasicButton className='py-0 px-32 w-[250px]' onClick={() => setShowIntroScreen(false)}>
-                        Join
-                    </BasicButton>
-                </div>
-            </section>
+                <p className='text-lg text-white'>{username}</p>
+                <BasicButton className='py-2 px-16 text-lg' onClick={() => setShowIntroScreen(false)}>
+                    Join Space
+                </BasicButton>
+                <p className='text-sm text-white/40 mt-2'>Video & audio will be available when you sit in a call zone</p>
+            </div>
         </main>
     )
 }
 
 export default IntroScreen
-
-function LocalVideo() {
-    const { isCameraMuted, isMicMuted } = useVideoChat()
-
-    return (
-        <div className='w-full h-full bg-[#111111] grid place-items-center relative'>
-            <div id='local-video' className='w-full h-full'>
-
-            </div>
-            <div className='absolute select-none text-sm text-white items-center flex flex-col gap-1'>
-                {isMicMuted && isCameraMuted && <p>You are muted</p>}
-                {isCameraMuted && <p>Your camera is off</p>}
-            </div>
-            {isMicMuted && !isCameraMuted && <p className='absolute bottom-2 right-3 select-none text-sm text-white bg-black bg-opacity-50 p-1 px-2 rounded-full'>
-                You are muted
-            </p>}
-        </div>
-    )
-}

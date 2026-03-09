@@ -1,9 +1,14 @@
 import Realm from './models/Realm'
 import Profile from './models/Profile'
 
+function isObjectId(id: string): boolean {
+  return /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 export async function getRealmById(id: string) {
   if (!id) return null
-  const realm = await Realm.findOne({ $or: [{ _id: id }, { id }] }).lean()
+  const query = isObjectId(id) ? { $or: [{ _id: id }, { id }] } : { id }
+  const realm = await Realm.findOne(query).lean()
   if (!realm) return null
   return {
     id: (realm as any).id || (realm as any)._id?.toString(),
@@ -17,5 +22,5 @@ export async function getRealmById(id: string) {
 
 export async function getProfileById(id: string) {
   const profile = await Profile.findOne({ id }).lean()
-  return profile ? { id: profile.id, skin: profile.skin, visited_realms: profile.visited_realms || [] } : null
+  return profile ? { id: profile.id, skin: profile.skin, avatarConfig: profile.avatarConfig || null, displayName: profile.displayName || null, visited_realms: profile.visited_realms || [] } : null
 }

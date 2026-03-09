@@ -102,12 +102,22 @@ const RoomItem:React.FC<RoomItemProps> = ({ rooms, selectedRoomIndex, roomIndex,
     return (
         <div 
             onClick={onRoomClick} 
-            className={`${selectedRoomIndex === roomIndex ? 'bg-light-secondary' : 'bg-darkblue cursor-pointer'} hover:bg-light-secondary w-full p-1 px-2 rounded-md flex flex-row items-center justify-between animate-colors`} 
+            className={`
+                ${selectedRoomIndex === roomIndex ? 'bg-white/10 text-white' : 'text-gray-300 cursor-pointer hover:bg-white/5'}
+                w-full py-1.5 px-2.5 rounded-lg flex items-center justify-between transition-all group
+            `}
         >
-            <input type='text' value={rooms[roomIndex]} className={`${inputDisabled ? 'pointer-events-none' : ''} grow bg-transparent outline-none select-none`} ref={inputRef} onChange={onInputChange} maxLength={32}/>
-            <div className='flex flex-row items-center gap-1'>
-                <PencilSquareIcon className='h-5 w-5 cursor-pointer hover:bg-darkblue rounded-md p-[2px] animate-colors' onClick={onPencilClick}/>
-                <Trash className={`h-5 w-5 cursor-pointer hover:bg-darkblue rounded-md p-[2px] animate-colors ${rooms.length <= 1 ? 'hidden' : ''}`} onClick={onTrashClick}/>
+            <input
+                type='text'
+                value={rooms[roomIndex]}
+                className={`${inputDisabled ? 'pointer-events-none' : ''} grow bg-transparent outline-none select-none text-sm`}
+                ref={inputRef}
+                onChange={onInputChange}
+                maxLength={32}
+            />
+            <div className='flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity'>
+                <PencilSquareIcon className='h-4 w-4 cursor-pointer hover:text-white rounded p-0.5 transition-colors text-gray-400' onClick={onPencilClick}/>
+                <Trash className={`h-4 w-4 cursor-pointer hover:text-red-400 rounded p-0.5 transition-colors text-gray-400 ${rooms.length <= 1 ? 'hidden' : ''}`} onClick={onTrashClick}/>
             </div>
         </div>
     )

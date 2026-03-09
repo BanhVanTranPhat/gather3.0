@@ -16,15 +16,20 @@ export function getToken(): string | null {
 
 export function setToken(token: string | null): void {
   if (typeof window === 'undefined') return
-  if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(TOKEN_KEY)
+    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`
+  }
 }
 
 async function request<T = unknown>(
   path: string,
   options: { method?: string; body?: unknown; headers?: Record<string, string> } = {}
 ): Promise<T> {
-  const url = `${getBaseUrl()}${path}`
+  const baseUrl = getBaseUrl()
+  const url = `${baseUrl}${path}`
   const token = getToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -32,11 +37,20 @@ async function request<T = unknown>(
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(url, {
-    method: options.method || 'GET',
-    headers,
-    body: options.body != null ? JSON.stringify(options.body) : undefined,
-  })
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: options.method || 'GET',
+      headers,
+      body: options.body != null ? JSON.stringify(options.body) : undefined,
+    })
+  } catch (e) {
+    const msg = (e as Error)?.message || ''
+    if (/failed to fetch|networkerror|load failed/i.test(msg))
+      throw new Error('Không kết nối được server. Chạy backend: cd backend && npm run dev (port 4000).')
+    throw e
+  }
+
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     const msg = (data as { message?: string }).message || res.statusText
@@ -68,6 +82,20 @@ export async function authRegister(email: string, password: string, displayName?
   )
   setToken(data.token)
   return data as { token: string; user: { id: string; email: string; displayName?: string } }
+}
+
+export async function authGoogle(payload: { googleId: string; email: string; username?: string; avatar?: string }) {
+  const data = await api.post<{ token: string; user: { id: string; email: string; displayName?: string; avatar?: string } }>(
+    '/auth/google',
+    {
+      googleId: payload.googleId,
+      email: payload.email,
+      username: payload.username ?? payload.email.split('@')[0],
+      avatar: payload.avatar,
+    }
+  )
+  setToken(data.token)
+  return data as { token: string; user: { id: string; email: string; displayName?: string; avatar?: string } }
 }
 
 export function authLogout() {

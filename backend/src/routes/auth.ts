@@ -33,6 +33,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
   const normalizedEmail = String(email).trim().toLowerCase()
   const user = await User.findOne({ email: normalizedEmail })
   if (!user) return res.status(401).json({ message: 'Email chưa đăng ký hoặc sai mật khẩu' })
+  if (!user.password) return res.status(401).json({ message: 'Tài khoản đăng nhập bằng Google. Vui lòng dùng Google.' })
   const ok = await comparePassword(String(password), user.password)
   if (!ok) return res.status(401).json({ message: 'Email chưa đăng ký hoặc sai mật khẩu' })
   const token = jwt.sign(
@@ -43,6 +44,40 @@ router.post('/auth/login', async (req: Request, res: Response) => {
   return res.json({
     token,
     user: { id: (user as any)._id.toString(), email: user.email, displayName: user.displayName },
+  })
+})
+
+router.post('/auth/google', async (req: Request, res: Response) => {
+  const { googleId, email, username, avatar } = req.body || {}
+  if (!googleId || !email) return res.status(400).json({ message: 'Google ID and email are required' })
+  const normalizedEmail = String(email).trim().toLowerCase()
+  let user = await User.findOne({ googleId })
+  if (!user) {
+    const existing = await User.findOne({ email: normalizedEmail })
+    if (existing) {
+      (existing as any).googleId = googleId
+      if (avatar) (existing as any).avatar = avatar
+      user = await existing.save()
+    } else {
+      user = await User.create({
+        email: normalizedEmail,
+        googleId,
+        displayName: username ? String(username).trim() : normalizedEmail.split('@')[0],
+        avatar: avatar || undefined,
+      })
+    }
+  } else if (avatar) {
+    (user as any).avatar = avatar
+    await user.save()
+  }
+  const token = jwt.sign(
+    { userId: (user as any)._id.toString(), email: user.email, displayName: user.displayName },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  )
+  return res.json({
+    token,
+    user: { id: (user as any)._id.toString(), email: user.email, displayName: user.displayName, avatar: (user as any).avatar },
   })
 })
 

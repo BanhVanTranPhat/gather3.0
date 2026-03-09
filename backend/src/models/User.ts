@@ -3,16 +3,20 @@ import bcrypt from 'bcryptjs'
 
 export interface IUser extends Document {
   email: string
-  password: string
+  password?: string
   displayName?: string
+  googleId?: string
+  avatar?: string
   createdAt?: Date
 }
 
 const userSchema = new Schema<IUser>(
   {
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    displayName: { type: String },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: false },
+    displayName: { type: String, trim: true },
+    googleId: { type: String, unique: true, sparse: true },
+    avatar: { type: String },
   },
   { timestamps: true }
 )

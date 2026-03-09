@@ -8,8 +8,15 @@ import { sessionManager } from '../session'
 import { removeExtraSpaces } from '../utils'
 import { kickPlayer } from './helpers'
 import { formatEmailToName } from '../utils'
+import ChatMessage from '../models/ChatMessage'
 
 const joiningInProgress = new Set<string>()
+
+// Lobby chat (trang /chat) — in-memory, tối đa 100 tin
+const LOBBY_MAX = 100
+const lobbyMessages: { id: string; uid: string; username: string; message: string; timestamp: number }[] = []
+const lobbyUsers: Record<string, { uid: string; username: string }> = {}
+let lobbyIdCounter = 0
 
 function protectConnection(io: Server) {
     io.use(async (socket, next) => {
@@ -77,6 +84,8 @@ export function sockets(io: Server) {
                 joiningInProgress.delete(uid)
             }
 
+            try {
+
             if (JoinRealm.safeParse(realmData).success === false) {
                 return rejectJoin('Invalid request data.')
             }
@@ -104,11 +113,15 @@ export function sockets(io: Server) {
             }
 
             const data = realm
+            const canonicalRealmId = realm.id
 
             const join = async () => {
-                const mapData = data.map_data != null ? data.map_data as any : {}
-                if (!sessionManager.getSession(realmData.realmId)) {
-                    sessionManager.createSession(realmData.realmId, mapData)
+                const mapData = data.map_data != null ? data.map_data as any : {
+                    spawnpoint: { roomIndex: 0, x: 0, y: 0 },
+                    rooms: [{ name: 'New Room', tilemap: {} }],
+                }
+                if (!sessionManager.getSession(canonicalRealmId)) {
+                    sessionManager.createSession(canonicalRealmId, mapData)
                 }
 
                 const currentSession = sessionManager.getPlayerSession(uid)
@@ -118,12 +131,12 @@ export function sockets(io: Server) {
 
                 const user = users.getUser(uid)!
                 const email = user.user_metadata?.email ?? user.email ?? ''
-                const username = formatEmailToName(email)
-                sessionManager.addPlayerToSession(socket.id, realmData.realmId, uid, username, profile.skin ?? '')
+                const username = (profile as any).displayName?.trim() || formatEmailToName(email)
+                sessionManager.addPlayerToSession(socket.id, canonicalRealmId, uid, username, profile.skin || '009', (profile as any).avatarConfig || null)
                 const newSession = sessionManager.getPlayerSession(uid)
                 const player = newSession.getPlayer(uid)   
 
-                socket.join(realmData.realmId)
+                socket.join(canonicalRealmId)
                 socket.emit('joinedRealm')
                 emit('playerJoinedRoom', player)
                 joiningInProgress.delete(uid)
@@ -141,6 +154,11 @@ export function sockets(io: Server) {
                 return join()
             } else {
                 return rejectJoin('The share link has been changed.')
+            }
+
+            } catch (err) {
+                console.error('joinRealm error:', err)
+                rejectJoin('Internal server error.')
             }
         })
 
@@ -219,6 +237,75 @@ export function sockets(io: Server) {
 
             const uid = socket.handshake.query.uid as string
             emit('receiveMessage', { uid, message })
+        })
+
+        // ─── Realm chat (persistent channels + DMs) ─────────────────────────
+        socket.on('joinChatChannel', (channelId: string) => {
+            if (typeof channelId !== 'string') return
+            socket.join(`chat:${channelId}`)
+        })
+
+        socket.on('leaveChatChannel', (channelId: string) => {
+            if (typeof channelId !== 'string') return
+            socket.leave(`chat:${channelId}`)
+        })
+
+        socket.on('chatMessage', async (data: { channelId: string; content: string; senderName: string }) => {
+            if (!data?.channelId || !data?.content) return
+            const content = data.content.trim().slice(0, 500)
+            if (!content) return
+
+            const uid = socket.handshake.query.uid as string
+            const msg = await ChatMessage.create({
+                channelId: data.channelId,
+                senderId: uid,
+                senderName: data.senderName || uid.slice(0, 8),
+                content,
+                timestamp: new Date(),
+            })
+
+            io.to(`chat:${data.channelId}`).emit('chatMessageReceived', {
+                _id: msg._id,
+                channelId: msg.channelId,
+                senderId: msg.senderId,
+                senderName: msg.senderName,
+                content: msg.content,
+                timestamp: msg.timestamp,
+            })
+        })
+
+        socket.on('chatTyping', (data: { channelId: string; username: string }) => {
+            if (!data?.channelId || !data?.username) return
+            socket.to(`chat:${data.channelId}`).emit('chatUserTyping', {
+                channelId: data.channelId,
+                username: data.username,
+            })
+        })
+
+        // ─── Lobby chat (trang /chat, không cần join realm) ─────────────────
+        socket.on('joinLobby', (data: { displayName?: string } = {}) => {
+            const uid = socket.handshake.query.uid as string
+            const u = users.getUser(uid)
+            const username = (data?.displayName && data.displayName.trim()) || (u ? (u.user_metadata?.displayName || formatEmailToName(u.email || '')) : uid.slice(0, 8))
+            socket.join('lobby')
+            lobbyUsers[socket.id] = { uid, username }
+            socket.emit('lobbyHistory', lobbyMessages.slice(-LOBBY_MAX))
+        })
+
+        socket.on('sendLobbyMessage', (data: { message?: string }) => {
+            const msg = typeof data?.message === 'string' ? data.message.trim() : ''
+            if (!msg || msg.length > 300) return
+            const uid = socket.handshake.query.uid as string
+            const info = lobbyUsers[socket.id]
+            const username = info?.username || uid.slice(0, 8)
+            const item = { id: `lobby-${++lobbyIdCounter}`, uid, username, message: msg, timestamp: Date.now() }
+            lobbyMessages.push(item)
+            if (lobbyMessages.length > LOBBY_MAX) lobbyMessages.shift()
+            io.to('lobby').emit('lobbyMessage', item)
+        })
+
+        socket.on('disconnect', () => {
+            delete lobbyUsers[socket.id]
         })
     })
 }

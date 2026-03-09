@@ -1,54 +1,78 @@
 import React from 'react'
-import { TShirt } from '@phosphor-icons/react'
-import { useModal } from '../hooks/useModal'
-import signal from '@/utils/signal'
-import { ArrowLeftEndOnRectangleIcon } from '@heroicons/react/24/outline'
+import { TShirt, Door, SmileySticker, Monitor, HandWaving } from '@phosphor-icons/react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import MicAndCameraButtons from '@/components/VideoChat/MicAndCameraButtons'
-import { useVideoChat } from '../hooks/useVideoChat'
-import AnimatedCharacter from './SkinMenu/AnimatedCharacter'
-import { useEffect } from 'react'
-import { videoChat } from '@/utils/video-chat/video-chat'
+import AvatarPreview from '@/components/AvatarPreview'
+import { DEFAULT_AVATAR_CONFIG } from '@/utils/avatarAssets'
 
 type PlayNavbarProps = {
     username: string
     skin: string
+    realmId?: string
+    shareId?: string
+    avatarConfig?: Record<string, string> | null
 }
 
+const PlayNavbar: React.FC<PlayNavbarProps> = ({ username, skin, realmId, shareId, avatarConfig }) => {
+    const config =
+        avatarConfig && Object.keys(avatarConfig).length > 0
+            ? { ...DEFAULT_AVATAR_CONFIG, ...avatarConfig }
+            : DEFAULT_AVATAR_CONFIG
+    const router = useRouter()
 
-const PlayNavbar:React.FC<PlayNavbarProps> = ({ username, skin }) => {
-
-    const { setModal } = useModal()
-    const { isCameraMuted } = useVideoChat()
     function onClickSkinButton() {
-        setModal('Skin')
-        signal.emit('requestSkin')
+        const returnUrl = realmId ? `/play/${realmId}${shareId ? `?shareId=${shareId}` : ''}` : '/app'
+        router.push(`/app/avatar?return=${encodeURIComponent(returnUrl)}`)
     }
 
-    useEffect(() => {
-        videoChat.playVideoTrackAtElementId('local-video')
-    }, [])
-
     return (
-        <div className='bg-primary w-full h-14 absolute bottom-0 flex flex-row items-center p-2 gap-4 select-none'>
-            <Link href='/app' className='aspect-square grid place-items-center rounded-lg p-1 outline-none bg-secondary hover:bg-light-secondary animate-colors'>
-                <ArrowLeftEndOnRectangleIcon className='h-8 w-8'/>
+        <div className="w-full h-12 flex-shrink-0 bg-[#1E2035]/95 backdrop-blur flex flex-row items-center justify-center gap-1 px-3 py-1.5 select-none border-t border-[#2D3054]">
+            <Link
+                href="/app"
+                className="p-2 rounded-xl hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors"
+                title="Leave room"
+            >
+                <Door className="w-5 h-5" />
             </Link>
-            <div className='h-full w-[200px] bg-secondary rounded-lg overflow-hidden flex flex-row'>
-                <div className='w-[60px] h-full border-r-[1px] border-light-gray relative grid place-items-center'>
-                    <AnimatedCharacter src={'/sprites/characters/Character_' + skin + '.png'} noAnimation className='w-8 h-8 absolute bottom-1' />
-                        <div id='local-video' className={`w-full h-full absolute ${!isCameraMuted ? 'block' : 'hidden'}`}>
 
-                        </div>
+            <div className="h-9 bg-[#252840] rounded-xl overflow-hidden flex flex-row items-center border border-[#2D3054]">
+                <div className="w-10 h-full border-r border-[#2D3054] relative grid place-items-center flex-shrink-0">
+                    <AvatarPreview avatarConfig={config} size={32} className="absolute bottom-0" />
                 </div>
-                <div className='w-full flex flex-col p-1 pl-2'>
-                    <p className='text-white text-xs'>{username}</p>
-                    <p className='text-[#BDBDBD] text-xs'>Available</p>
+                <div className="flex flex-col px-2 min-w-0">
+                    <p className="text-white text-[11px] font-medium truncate max-w-[100px]">{username}</p>
+                    <p className="text-[#6B7280] text-[10px]">Available</p>
                 </div>
             </div>
-            <MicAndCameraButtons />
-            <button className='aspect-square grid place-items-center rounded-lg p-1 outline-none bg-secondary hover:bg-light-secondary ml-auto animate-colors' onClick={onClickSkinButton}>
-                <TShirt className='h-8 w-8'/>
+
+            <button
+                type="button"
+                className="p-2 rounded-xl hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors"
+                title="Screen share"
+            >
+                <Monitor className="w-5 h-5" />
+            </button>
+            <button
+                type="button"
+                className="p-2 rounded-xl hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors"
+                title="Wave"
+            >
+                <HandWaving className="w-5 h-5" />
+            </button>
+            <button
+                type="button"
+                className="p-2 rounded-xl hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors"
+                title="Emote"
+            >
+                <SmileySticker className="w-5 h-5" />
+            </button>
+            <button
+                type="button"
+                className="p-2 rounded-xl hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors"
+                onClick={onClickSkinButton}
+                title="Avatar / Skin"
+            >
+                <TShirt className="w-5 h-5" />
             </button>
         </div>
     )

@@ -15,16 +15,17 @@ type PixiAppProps = {
     uid: string
     shareId: string
     initialSkin: string
+    avatarConfig?: Record<string, string>
 }
 
-const PixiApp:React.FC<PixiAppProps> = ({ className, mapData, username, access_token, realmId, uid, shareId, initialSkin }) => {
+const PixiApp:React.FC<PixiAppProps> = ({ className, mapData, username, access_token, realmId, uid, shareId, initialSkin, avatarConfig }) => {
 
     const appRef = useRef<PlayApp | null>(null)
     const { setModal, setLoadingText, setFailedConnectionMessage, setErrorModal } = useModal()
 
     useEffect(() => {
         const mount = async () => {
-            const app = new PlayApp(uid, realmId, mapData, username, initialSkin)
+            const app = new PlayApp(uid, realmId, mapData, username, initialSkin, avatarConfig)
             appRef.current = app
             setModal('Loading')
             setLoadingText('Connecting to server...')

@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js'
 import playerSpriteSheetData from './PlayerSpriteSheetData'
+import { lpcPlayerSpriteSheetData } from './LPCPlayerSpriteSheetData'
 import { Point, Coordinate, AnimationState, Direction } from '../types'
 import { PlayApp } from '../PlayApp'
 import { bfs } from '../pathfinding'
@@ -7,6 +8,9 @@ import { server } from '../../backend/server'
 import { defaultSkin, skins } from './skins'
 import signal from '@/utils/signal'
 import { videoChat } from '@/utils/video-chat/video-chat'
+import { getZoneAt, officeZones } from '@/utils/zones'
+import { composeAvatarSpriteSheetCanvas } from '@/utils/avatarComposer'
+import { DEFAULT_AVATAR_CONFIG } from '@/utils/avatarAssets'
 function formatText(message: string, maxLength: number): string {
     message = message.trim()
     const words = message.split(' ')
@@ -63,29 +67,58 @@ export class Player {
     public frozen: boolean = false
     private initialized: boolean = false
     private strikes: number = 0
+    private avatarConfig?: Record<string, string>
 
     private currentChannel: string = 'local'
 
-    constructor(skin: string, playApp: PlayApp, username: string, isLocal: boolean = false) {
-        this.skin = skin
+    constructor(skin: string, playApp: PlayApp, username: string, isLocal: boolean = false, avatarConfig?: Record<string, string>) {
+        this.skin = skin || defaultSkin
         this.playApp = playApp
         this.username = username
         this.isLocal = isLocal
+        this.avatarConfig = avatarConfig
     }
 
     private async loadAnimations() {
-        const src = `/sprites/characters/Character_${this.skin}.png`
-        await PIXI.Assets.load(src)
+        let spriteSheetTexture: PIXI.Texture | null = null
+        let usedComposedAvatar = false
+        const configToUse = this.avatarConfig && Object.keys(this.avatarConfig).length > 0
+            ? this.avatarConfig
+            : DEFAULT_AVATAR_CONFIG
 
-        const spriteSheetData = JSON.parse(JSON.stringify(playerSpriteSheetData))
-        spriteSheetData.meta.image = src
+        if (configToUse) {
+            try {
+                const canvas = await composeAvatarSpriteSheetCanvas({ avatarConfig: configToUse })
+                if (canvas) {
+                    spriteSheetTexture = PIXI.Texture.from(canvas)
+                    usedComposedAvatar = true
+                }
+            } catch (e) {
+                console.warn('Failed to compose avatar spritesheet.', e)
+            }
+        }
 
-        this.sheet = new PIXI.Spritesheet(PIXI.Texture.from(src), spriteSheetData)
+        if (!spriteSheetTexture) {
+            const src = `/sprites/characters/Character_${this.skin}.png`
+            await PIXI.Assets.load(src)
+            spriteSheetTexture = PIXI.Texture.from(src)
+        }
+
+        const useLpc = usedComposedAvatar
+
+        const spriteSheetData = useLpc
+            ? JSON.parse(JSON.stringify(lpcPlayerSpriteSheetData))
+            : JSON.parse(JSON.stringify(playerSpriteSheetData))
+
+        this.sheet = new PIXI.Spritesheet(spriteSheetTexture, spriteSheetData)
         await this.sheet.parse()
 
         const animatedSprite = new PIXI.AnimatedSprite(this.sheet.animations['idle_down'])
         animatedSprite.animationSpeed = this.animationSpeed
         animatedSprite.play()
+        if (useLpc) {
+            animatedSprite.scale.set(0.75)
+        }
 
         if (!this.initialized) {
             this.parent.addChild(animatedSprite)
@@ -185,6 +218,11 @@ export class Player {
 
     public moveToTile = (x: number, y: number) => {
         if (this.strikes > 25) return
+
+        if (this.isLocal) {
+            signal.emit('playerSitting', false)
+            signal.emit('leaveGroupCall')
+        }
 
         const start: Coordinate = [this.currentTilePosition.x, this.currentTilePosition.y]
         const end: Coordinate = [x, y]
@@ -318,7 +356,22 @@ export class Player {
         this.targetPosition = null
 
         if (this.isLocal) {
-            this.changeAnimationState(`idle_${this.direction}` as AnimationState)
+            const onSeat = this.playApp.hasSeatAtTile(this.currentTilePosition.x, this.currentTilePosition.y)
+            if (onSeat && this.sheet.animations?.['sit_down']) {
+                this.changeAnimationState('sit_down')
+                signal.emit('playerSitting', true)
+                const zone = getZoneAt(this.currentTilePosition.x, this.currentTilePosition.y, officeZones)
+                if (zone?.callEnabled) {
+                    const clusterId = this.playApp.getSeatClusterId(this.currentTilePosition.x, this.currentTilePosition.y)
+                    signal.emit('joinGroupCall', {
+                        zoneId: `${zone.id}-${clusterId}`,
+                        zoneName: zone.name,
+                        realmId: this.playApp.realmId,
+                    })
+                }
+            } else {
+                this.changeAnimationState(`idle_${this.direction}` as AnimationState)
+            }
         } else {
             // if player doesnt move for x secs, do idle animation
             setTimeout(() => {

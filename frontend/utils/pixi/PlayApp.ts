@@ -7,6 +7,12 @@ import { defaultSkin } from './Player/skins'
 import signal from '../signal'
 import { createClient } from '../auth/client'
 import { gsap } from 'gsap'
+import { getZoneAt, officeZones } from '../zones'
+
+const MIN_ZOOM = 0.3
+const MAX_ZOOM = 3
+const ZOOM_STEP = 0.25
+const OVERVIEW_THRESHOLD = 0.55
 
 export class PlayApp extends App {
     private scale: number = 1.5
@@ -28,12 +34,14 @@ export class PlayApp extends App {
     private fadeAnimation: gsap.core.Tween | null = null
     private currentPrivateAreaTiles: TilePoint[] = []
     public proximityId: string | null = null
+    private avatarConfig?: Record<string, string>
 
-    constructor(uid: string, realmId: string, realmData: RealmData, username: string, skin: string = defaultSkin) {
+    constructor(uid: string, realmId: string, realmData: RealmData, username: string, skin: string = defaultSkin, avatarConfig?: Record<string, string>) {
         super(realmData)
         this.uid = uid
         this.realmId = realmId
-        this.player = new Player(skin, this, username, true)
+        this.avatarConfig = avatarConfig
+        this.player = new Player(skin, this, username, true, this.avatarConfig)
     }
 
     override async loadRoom(index: number) {
@@ -127,6 +135,15 @@ export class PlayApp extends App {
         }
 
         this.sortObjectsByY()
+        this.emitPlayersInRoom()
+    }
+
+    private emitPlayersInRoom = () => {
+        const online = [
+            { uid: this.uid, username: this.player.username },
+            ...Object.entries(this.players).map(([uid, p]) => ({ uid, username: p.username }))
+        ]
+        signal.emit('playersInRoom', { online })
     }
 
     private async updatePlayer(uid: string, player: any) {
@@ -138,17 +155,48 @@ export class PlayApp extends App {
                 this.players[uid].setPosition(player.x, player.y)
             }
         } else {
-            await this.spawnPlayer(player.uid, player.skin, player.username, player.x, player.y)
+            await this.spawnPlayer(player.uid, player.skin, player.username, player.x, player.y, player.avatarConfig)
         }
     }
 
-    private async spawnPlayer(uid: string, skin: string, username: string, x: number, y: number) {
-        const otherPlayer = new Player(skin, this, username)
+    private async spawnPlayer(uid: string, skin: string, username: string, x: number, y: number, avatarConfig?: Record<string, string> | null) {
+        const otherPlayer = new Player(skin, this, username, false, avatarConfig || undefined)
         await otherPlayer.init()
         otherPlayer.setPosition(x, y)
         this.layers.object.addChild(otherPlayer.parent)
         this.players[uid] = otherPlayer
         this.sortObjectsByY()
+        this.emitPlayersInRoom()
+    }
+
+    private zoneLabelsContainer: PIXI.Container = new PIXI.Container()
+
+    private createZoneLabels = () => {
+        this.zoneLabelsContainer.removeChildren()
+        for (const zone of officeZones) {
+            const centerX = ((zone.bounds.x1 + zone.bounds.x2) / 2) * 32
+            const centerY = ((zone.bounds.y1 + zone.bounds.y2) / 2) * 32
+
+            const label = new PIXI.Text({
+                text: `${zone.icon} ${zone.name}`,
+                style: {
+                    fontFamily: 'Nunito, sans-serif',
+                    fontSize: 14,
+                    fill: 0xffffff,
+                    align: 'center',
+                    stroke: { color: 0x000000, width: 3 },
+                },
+            })
+            label.anchor.set(0.5)
+            label.position.set(centerX, centerY)
+            this.zoneLabelsContainer.addChild(label)
+        }
+        this.zoneLabelsContainer.alpha = 0
+    }
+
+    private updateZoneLabelsVisibility = () => {
+        const targetAlpha = this.scale <= 1.0 ? Math.min(1, (1.0 - this.scale) / 0.4) : 0
+        this.zoneLabelsContainer.alpha = targetAlpha
     }
 
     public async init() {
@@ -160,13 +208,44 @@ export class PlayApp extends App {
         this.app.renderer.on('resize', this.resizeEvent)
         this.fadeTileContainer.alpha = 0
         this.app.stage.addChild(this.fadeTileContainer)
+        this.createZoneLabels()
+        this.app.stage.addChild(this.zoneLabelsContainer)
         this.clickEvents()
         this.setUpKeyboardEvents()
         this.setUpFadeOverlay()
         this.setUpSignalListeners()
         this.setUpSocketEvents()
+        this.setUpWheelZoom()
 
         this.fadeOut()
+    }
+
+    private wheelZoomCanvas: HTMLCanvasElement | null = null
+
+    private wheelZoomHandler = (e: WheelEvent) => {
+        e.preventDefault()
+        if (e.ctrlKey) {
+            const pinchDelta = -e.deltaY * 0.01
+            this.zoomTo(this.scale + pinchDelta)
+        } else {
+            const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
+            this.zoomTo(this.scale + delta)
+        }
+    }
+
+    private setUpWheelZoom = () => {
+        const canvas = this.app.canvas
+        if (canvas) {
+            this.wheelZoomCanvas = canvas
+            canvas.addEventListener('wheel', this.wheelZoomHandler, { passive: false })
+        }
+    }
+
+    private removeWheelZoom = () => {
+        if (this.wheelZoomCanvas) {
+            this.wheelZoomCanvas.removeEventListener('wheel', this.wheelZoomHandler)
+            this.wheelZoomCanvas = null
+        }
     }
 
     private spawnLocalPlayer = async () => {
@@ -181,16 +260,105 @@ export class PlayApp extends App {
         this.moveCameraToPlayer()
     }
 
+    private isOverview = false
+
     private setScale = (newScale: number) => {
-        this.scale = newScale
+        this.scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale))
         this.app.stage.scale.set(this.scale)
+
+        const wasOverview = this.isOverview
+        this.isOverview = this.scale <= OVERVIEW_THRESHOLD
+
+        this.updateZoneLabelsVisibility()
+
+        if (this.isOverview !== wasOverview || this.isOverview) {
+            const bounds = this.getCurrentRoomBounds()
+            signal.emit('zoomChanged', {
+                zoom: this.scale,
+                isOverview: this.isOverview,
+                ...bounds,
+                playerX: this.player?.currentTilePosition?.x ?? 0,
+                playerY: this.player?.currentTilePosition?.y ?? 0,
+            })
+        }
     }
 
+    public zoomIn = () => {
+        this.setScale(this.scale + ZOOM_STEP)
+        this.moveCameraToPlayer()
+    }
+
+    public zoomOut = () => {
+        this.setScale(this.scale - ZOOM_STEP)
+        this.moveCameraToPlayer()
+    }
+
+    public zoomTo = (newScale: number) => {
+        this.setScale(newScale)
+        this.moveCameraToPlayer()
+    }
+
+    private zoomByDelta = (delta: number) => {
+        this.zoomTo(this.scale + delta)
+    }
+
+    private lastMinimapEmit = 0
+    private readonly MINIMAP_EMIT_INTERVAL_MS = 150
+
+    private lastZoneId: string | null = null
+
     public moveCameraToPlayer = () => {
-        const x = this.player.parent.x - (this.app.screen.width / 2) / this.scale
-        const y = this.player.parent.y - (this.app.screen.height / 2) / this.scale
+        let x: number, y: number
+
+        if (this.isOverview) {
+            const bounds = this.getCurrentRoomBounds()
+            const mapCenterX = ((bounds.minX + bounds.maxX + 1) / 2) * 32
+            const mapCenterY = ((bounds.minY + bounds.maxY + 1) / 2) * 32
+            x = mapCenterX - (this.app.screen.width / 2) / this.scale
+            y = mapCenterY - (this.app.screen.height / 2) / this.scale
+        } else {
+            x = this.player.parent.x - (this.app.screen.width / 2) / this.scale
+            y = this.player.parent.y - (this.app.screen.height / 2) / this.scale
+        }
+
         this.app.stage.pivot.set(x, y)
         this.updateFadeOverlay(x, y)
+        const now = Date.now()
+        if (now - this.lastMinimapEmit >= this.MINIMAP_EMIT_INTERVAL_MS) {
+            this.lastMinimapEmit = now
+            const bounds = this.getCurrentRoomBounds()
+            signal.emit('minimapPosition', {
+                x: this.player.currentTilePosition.x,
+                y: this.player.currentTilePosition.y,
+                roomIndex: this.currentRoomIndex,
+                roomName: this.realmData.rooms[this.currentRoomIndex]?.name ?? '',
+                ...bounds,
+            })
+
+            const currentZone = getZoneAt(
+                this.player.currentTilePosition.x,
+                this.player.currentTilePosition.y,
+                officeZones
+            )
+            const zoneId = currentZone?.id ?? null
+            if (zoneId !== this.lastZoneId) {
+                this.lastZoneId = zoneId
+                signal.emit('playerZoneChanged', currentZone)
+            }
+        }
+    }
+
+    private getCurrentRoomBounds = (): { minX: number; maxX: number; minY: number; maxY: number } => {
+        const keys = Object.keys(this.realmData.rooms[this.currentRoomIndex].tilemap)
+        let minX = 0, maxX = 0, minY = 0, maxY = 0
+        if (keys.length > 0) {
+            const coords = keys.map((k) => k.split(',').map(Number) as [number, number])
+            minX = Math.min(...coords.map(([x]) => x))
+            maxX = Math.max(...coords.map(([x]) => x))
+            minY = Math.min(...coords.map(([, y]) => y))
+            maxY = Math.max(...coords.map(([, y]) => y))
+        }
+        return { minX, maxX, minY, maxY }
     }
 
     private updateFadeOverlay = (x: number, y: number) => {
@@ -286,6 +454,45 @@ export class PlayApp extends App {
         return this.realmData.rooms[this.currentRoomIndex].tilemap[tile]?.teleporter
     }
 
+    /** Kiểm tra tile có phải ghế/bench/stool không (để hiệu ứng ngồi) */
+    public hasSeatAtTile = (x: number, y: number) => {
+        const tile = `${x}, ${y}` as TilePoint
+        const tileData = this.realmData.rooms[this.currentRoomIndex].tilemap[tile]
+        if (!tileData) return false
+        const above = (tileData.above_floor || '').toLowerCase()
+        const obj = (tileData.object || '').toLowerCase()
+        const combined = above + ' ' + obj
+        return combined.includes('chair') || combined.includes('bench') || combined.includes('stool')
+    }
+
+    public getSeatClusterId = (startX: number, startY: number): string => {
+        const CLUSTER_RANGE = 3
+        const visited = new Set<string>()
+        const queue: [number, number][] = [[startX, startY]]
+        visited.add(`${startX},${startY}`)
+        let minX = startX, minY = startY
+
+        while (queue.length > 0) {
+            const [cx, cy] = queue.shift()!
+            if (cx < minX || (cx === minX && cy < minY)) { minX = cx; minY = cy }
+
+            for (let dx = -CLUSTER_RANGE; dx <= CLUSTER_RANGE; dx++) {
+                for (let dy = -CLUSTER_RANGE; dy <= CLUSTER_RANGE; dy++) {
+                    if (dx === 0 && dy === 0) continue
+                    const nx = cx + dx, ny = cy + dy
+                    const key = `${nx},${ny}`
+                    if (visited.has(key)) continue
+                    if (this.hasSeatAtTile(nx, ny)) {
+                        visited.add(key)
+                        queue.push([nx, ny])
+                    }
+                }
+            }
+        }
+
+        return `cluster-${minX}-${minY}`
+    }
+
     private fadeIn = () => {
         PIXI.Ticker.shared.remove(this.fadeOutTicker)
         this.fadeOverlay.alpha = 0
@@ -327,11 +534,12 @@ export class PlayApp extends App {
             this.players[uid].destroy()
             this.layers.object.removeChild(this.players[uid].parent)
             delete this.players[uid]
+            this.emitPlayersInRoom()
         }
     }
 
     private onPlayerJoinedRoom = (playerData: any) => {
-        this.updatePlayer(playerData.uid, playerData)
+        this.updatePlayer(playerData.uid, playerData).then(() => this.emitPlayersInRoom())
     }
 
     private onPlayerMoved = (data: any) => {
@@ -361,12 +569,23 @@ export class PlayApp extends App {
         })
     }
 
+    private navigateToTile = (data: { x: number; y: number }) => {
+        this.setScale(1.5)
+        this.player.moveToTile(data.x, data.y)
+        this.player.setMovementMode('mouse')
+        this.moveCameraToPlayer()
+    }
+
     private setUpSignalListeners = () => {
         signal.on('requestSkin', this.onRequestSkin)
         signal.on('switchSkin', this.onSwitchSkin)
         signal.on('disableInput', this.onDisableInput)
         signal.on('message', this.onMessage)
         signal.on('getSkinForUid', this.getSkinForUid)
+        signal.on('mapZoomIn', this.zoomIn)
+        signal.on('mapZoomOut', this.zoomOut)
+        signal.on('mapZoomDelta', this.zoomByDelta)
+        signal.on('navigateToTile', this.navigateToTile)
     }
 
     private removeSignalListeners = () => {
@@ -375,6 +594,10 @@ export class PlayApp extends App {
         signal.off('disableInput', this.onDisableInput)
         signal.off('message', this.onMessage)
         signal.off('getSkinForUid', this.getSkinForUid)
+        signal.off('mapZoomIn', this.zoomIn)
+        signal.off('mapZoomOut', this.zoomOut)
+        signal.off('mapZoomDelta', this.zoomByDelta)
+        signal.off('navigateToTile', this.navigateToTile)
     }
 
     private onRequestSkin = () => {
@@ -470,6 +693,7 @@ export class PlayApp extends App {
     }
 
     private removeEvents = () => {
+        this.removeWheelZoom()
         this.removeSocketEvents()
         this.destroyPlayers()
         server.disconnect()

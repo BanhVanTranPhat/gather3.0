@@ -44,6 +44,8 @@ Create a .env.local file in the `frontend` directory with the following variable
 ```
 NEXT_PUBLIC_BASE_URL=
 NEXT_PUBLIC_BACKEND_URL=
+# Optional: for "Đăng nhập bằng Google" on signin
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 ```
 
 For video chat (optional), add:
@@ -53,3 +55,14 @@ APP_CERTIFICATE=
 ```
 
 Lastly, run `npm run dev` in both the `frontend` and `backend` directories.
+
+### Troubleshooting
+
+- **404 on `_next/static/chunks/main-app.js` or `app-pages-internals.js`**  
+  Clear the Next.js build and restart: from `frontend` run `yarn clean` (or `npm run clean`) then `yarn dev`. Hard-refresh the page (Ctrl+Shift+R / Cmd+Shift+R) or try an incognito window.
+
+- **Đăng nhập / đăng ký không được (Cannot sign in or register)**  
+  Backend phải chạy trước. Trong thư mục `backend` chạy `npm run dev` (port 4000). Nếu backend tắt, trang signin sẽ báo: "Không kết nối được server..."
+
+- **Google OAuth (Đăng nhập bằng Google)**  
+  Tạo OAuth 2.0 Client ID (Web application) trong [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials. Thêm **Authorized JavaScript origins**: `http://localhost:3000` và domain production. Thêm **Authorized redirect URIs** tương ứng. Đặt `NEXT_PUBLIC_GOOGLE_CLIENT_ID` trong `frontend/.env.local`.

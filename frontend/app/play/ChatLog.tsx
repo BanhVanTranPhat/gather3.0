@@ -1,7 +1,8 @@
 'use client'
 import signal from '@/utils/signal'
 import React, { useState, useEffect, useRef } from 'react'
-import { Chat, ArrowUpLeft } from '@phosphor-icons/react'
+import { Chat, ArrowUpLeft, PaperPlaneTilt } from '@phosphor-icons/react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type ChatLogProps = {}
 
@@ -38,15 +39,17 @@ function getColorClass(color: Message['color']) {
     }
 }
 
+const MAX_MESSAGE_LENGTH = 500
+
 const ChatLog: React.FC<ChatLogProps> = () => {
     const [messages, setMessages] = useState<Message[]>([])
     const [expanded, setExpanded] = useState(true)
-    const containerRef = useRef<HTMLDivElement>(null)
+    const [inputValue, setInputValue] = useState('')
+    const inputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         const onNewMessage = (message: Message) => {
             setMessages(prevMessages => [message, ...prevMessages])
-            containerRef.current?.scrollTo(0, containerRef.current.scrollHeight)
         }
 
         const onNewRoomChat = (data: { name: string, channelId: string }) => {
@@ -74,30 +77,83 @@ const ChatLog: React.FC<ChatLogProps> = () => {
         setExpanded(false)
     }
 
+    const sendMessage = () => {
+        const content = inputValue.trim()
+        if (!content || content.length > MAX_MESSAGE_LENGTH) return
+        signal.emit('message', content)
+        setInputValue('')
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            sendMessage()
+        }
+    }
+
     return (
-        <div className='absolute top-0 left-0 hidden sm:flex'>
-            {!expanded && (
-                <div
-                    className='bg-secondary hover:bg-light-secondary animate-colors p-2 grid place-items-center rounded-br-lg cursor-pointer'
-                    onClick={expand}
-                >
-                    <Chat className='h-7 w-7' />
-                </div>
-            )}
-            {expanded && (
-                <div className='bg-secondary bg-opacity-80 w-[500px] h-[200px] rounded-br-lg transparent-scrollbar relative p-1'>
-                    <div className='cursor-pointer absolute bottom-0 right-0 rounded-tl-lg rounded-br-lg bg-darkblue hover:bg-light-secondary animate-colors bg-opacity-80 p-2' onClick={collapse}>
-                        <ArrowUpLeft className='h-4 w-4' />
-                    </div>
-                    <div className='w-full h-full flex flex-col-reverse overflow-y-scroll p-2 pr-4'>
+        <div className='absolute top-0 left-0 z-10'>
+            <AnimatePresence mode="wait">
+                {!expanded && (
+                    <motion.div
+                        key="collapsed"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        className='bg-secondary hover:bg-light-secondary animate-colors p-2 grid place-items-center rounded-br-lg cursor-pointer'
+                        onClick={expand}
+                    >
+                        <Chat className='h-7 w-7' />
+                    </motion.div>
+                )}
+                {expanded && (
+                    <motion.div
+                        key="expanded"
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -12 }}
+                        transition={{ duration: 0.15 }}
+                        className='bg-secondary bg-opacity-95 w-[500px] max-h-[280px] rounded-br-lg transparent-scrollbar relative flex flex-col'
+                    >
+                    <div className='flex-1 min-h-0 flex flex-col-reverse overflow-y-scroll p-2 pr-10'>
                         {messages.map((message, index) => (
                             <div key={index} className={getColorClass(message.color)}>
-                                {message.username && <span className='font-bold'>{message.username}:</span>} {message.content}
+                                {message.username && <span className='font-bold'>{message.username}: </span>}{message.content}
                             </div>
                         ))}
                     </div>
-                </div>
-            )}
+                    <div className='flex gap-2 p-2 border-t border-light-gray'>
+                        <input
+                            ref={inputRef}
+                            type='text'
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+                            onKeyDown={handleKeyDown}
+                            placeholder='Nhập tin nhắn... (Enter để gửi)'
+                            className='flex-1 bg-darkblue rounded-lg px-3 py-2 text-sm text-white placeholder-[#9CA3AF] outline-none focus:ring-1 focus:ring-quaternary'
+                            maxLength={MAX_MESSAGE_LENGTH}
+                        />
+                        <button
+                            type='button'
+                            onClick={sendMessage}
+                            disabled={!inputValue.trim()}
+                            className='p-2 rounded-lg bg-quaternary hover:bg-quaternaryhover disabled:opacity-50 disabled:cursor-not-allowed text-primary transition-colors'
+                            title='Gửi'
+                        >
+                            <PaperPlaneTilt className='w-5 h-5' />
+                        </button>
+                    </div>
+                    <button
+                        type='button'
+                        className='absolute bottom-2 right-2 rounded-lg bg-darkblue hover:bg-light-secondary p-2 transition-colors'
+                        onClick={collapse}
+                        title='Thu gọn'
+                    >
+                        <ArrowUpLeft className='h-4 w-4' />
+                    </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

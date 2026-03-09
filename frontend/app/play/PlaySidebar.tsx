@@ -1,0 +1,290 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import {
+    MagnifyingGlass, Copy, ChatCircle, CalendarBlank,
+    Gear, MapTrifold, Users, Buildings, LinkSimple
+} from '@phosphor-icons/react'
+import signal from '@/utils/signal'
+import InviteModal from '@/components/InviteModal'
+
+export type PlayerInRoom = { uid: string; username: string }
+
+type ActivePanel = 'people' | 'chat' | null
+
+type PlaySidebarProps = {
+    username: string
+    currentUid: string
+    ownerId: string
+    roomName: string
+    inviteUrl: string
+    avatarConfig?: Record<string, string> | null
+    showChatPanel: boolean
+    onToggleChatPanel: () => void
+    className?: string
+}
+
+const PlaySidebar: React.FC<PlaySidebarProps> = ({
+    username,
+    currentUid,
+    ownerId,
+    roomName,
+    inviteUrl,
+    avatarConfig,
+    showChatPanel,
+    onToggleChatPanel,
+    className = '',
+}) => {
+    const [online, setOnline] = useState<PlayerInRoom[]>([])
+    const [search, setSearch] = useState('')
+    const [showInviteModal, setShowInviteModal] = useState(false)
+    const [activePanel, setActivePanel] = useState<ActivePanel>('people')
+
+    useEffect(() => {
+        const onPlayersInRoom = (payload: { online: PlayerInRoom[] }) => {
+            setOnline(payload.online || [])
+        }
+        signal.on('playersInRoom', onPlayersInRoom)
+        return () => signal.off('playersInRoom', onPlayersInRoom)
+    }, [])
+
+    const togglePanel = (panel: ActivePanel) => {
+        if (panel === 'chat') {
+            onToggleChatPanel()
+            return
+        }
+        setActivePanel(prev => prev === panel ? null : panel)
+    }
+
+    const closeAll = () => {
+        setActivePanel(null)
+        if (showChatPanel) onToggleChatPanel()
+    }
+
+    const filteredOnline = search.trim()
+        ? online.filter(
+              (p) =>
+                  p.username.toLowerCase().includes(search.trim().toLowerCase()) ||
+                  p.uid.toLowerCase().includes(search.trim().toLowerCase())
+          )
+        : online
+
+    type SidebarButton = { id: string; icon: React.ReactNode; label: string; panel?: ActivePanel; action?: () => void }
+    const iconButtons: SidebarButton[] = [
+        { id: 'people', icon: <Users className="w-5 h-5" />, label: 'People', panel: 'people' },
+        { id: 'search', icon: <MagnifyingGlass className="w-5 h-5" />, label: 'Search', panel: 'people' },
+        { id: 'map', icon: <MapTrifold className="w-5 h-5" />, label: 'Map', action: closeAll },
+        { id: 'calendar', icon: <CalendarBlank className="w-5 h-5" />, label: 'Calendar' },
+        { id: 'chat', icon: <ChatCircle className="w-5 h-5" weight={showChatPanel ? 'fill' : 'regular'} />, label: 'Chat', panel: 'chat' },
+    ]
+
+    return (
+        <>
+            <InviteModal
+                open={showInviteModal}
+                onClose={() => setShowInviteModal(false)}
+                inviteUrl={inviteUrl}
+                roomName={roomName}
+            />
+
+            <div className={`flex h-full ${className}`}>
+                {/* Slim icon bar */}
+                <div className="w-12 flex-shrink-0 flex flex-col items-center bg-[#1E2035] border-r border-[#2D3054] py-3 gap-1 z-10">
+                    {/* Room logo */}
+                    <button
+                        type="button"
+                        onClick={() => togglePanel('people')}
+                        className="w-9 h-9 rounded-xl bg-[#6C72CB] flex items-center justify-center text-white font-bold text-sm mb-3 hover:opacity-90 transition-opacity"
+                        title={roomName}
+                    >
+                        {roomName.charAt(0).toUpperCase()}
+                    </button>
+
+                    <div className="w-6 h-px bg-[#2D3054] mb-2" />
+
+                    {iconButtons.map((btn) => {
+                        const isMapBtn = btn.id === 'map'
+                        const isActive = isMapBtn
+                            ? (activePanel === null && !showChatPanel)
+                            : btn.panel === 'chat' ? showChatPanel : activePanel === btn.panel
+                        return (
+                            <button
+                                key={btn.id}
+                                type="button"
+                                onClick={() => btn.action ? btn.action() : btn.panel ? togglePanel(btn.panel) : undefined}
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                                    isActive
+                                        ? 'bg-white/15 text-white shadow-sm'
+                                        : 'text-[#8B8FA3] hover:text-white hover:bg-white/5'
+                                }`}
+                                title={btn.label}
+                            >
+                                {btn.icon}
+                            </button>
+                        )
+                    })}
+
+                    <div className="flex-1" />
+
+                    <a
+                        href="/app"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-[#8B8FA3] hover:text-white hover:bg-white/5 transition-all duration-150"
+                        title="Dashboard"
+                    >
+                        <Buildings className="w-5 h-5" />
+                    </a>
+                    <a
+                        href="/app"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-[#8B8FA3] hover:text-white hover:bg-white/5 transition-all duration-150"
+                        title="Settings"
+                    >
+                        <Gear className="w-5 h-5" />
+                    </a>
+                </div>
+
+                {/* Expandable panel */}
+                {activePanel === 'people' && (
+                    <div className="w-[220px] flex-shrink-0 flex flex-col bg-[#252840] border-r border-[#2D3054] animate-fade-in">
+                        {/* Room header */}
+                        <div className="p-4 pb-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <h2 className="text-white font-semibold text-sm truncate flex-1">{roomName}</h2>
+                                <button
+                                    type="button"
+                                    onClick={() => navigator.clipboard.writeText(inviteUrl)}
+                                    className="p-1 rounded hover:bg-white/10 text-[#8B8FA3] hover:text-white transition-colors"
+                                    title="Copy invite link"
+                                >
+                                    <LinkSimple className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-[#8B8FA3] mb-3">
+                                Experience Gather together
+                            </p>
+                            <p className="text-[10px] text-[#6B7280] mb-2">Invite your closest collaborators.</p>
+
+                            {/* Member avatars row */}
+                            <div className="flex items-center gap-1 mb-3">
+                                {online.slice(0, 5).map((p) => (
+                                    <div
+                                        key={p.uid}
+                                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                        style={{ backgroundColor: stringToColor(p.username) }}
+                                        title={p.username}
+                                    >
+                                        {p.username.charAt(0).toUpperCase()}
+                                    </div>
+                                ))}
+                                {online.length > 5 && (
+                                    <div className="w-7 h-7 rounded-full bg-[#3F4776] flex items-center justify-center text-[10px] text-[#8B8FA3]">
+                                        +{online.length - 5}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowInviteModal(true)}
+                                    className="w-7 h-7 rounded-full border-2 border-dashed border-[#3F4776] flex items-center justify-center text-[#8B8FA3] hover:border-white/30 hover:text-white transition-colors"
+                                    title="Invite someone"
+                                >
+                                    <span className="text-sm leading-none">+</span>
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowInviteModal(true)}
+                                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#6C72CB] hover:bg-[#5A60B5] text-white text-xs font-medium transition-colors"
+                            >
+                                <Copy className="w-3.5 h-3.5" />
+                                Invite
+                            </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="px-3 pb-2">
+                            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#1E2035] border border-[#2D3054]">
+                                <MagnifyingGlass className="w-3.5 h-3.5 text-[#6B7280]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search people."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="flex-1 bg-transparent text-xs text-white placeholder-[#6B7280] outline-none"
+                                />
+                                <span className="text-[10px] text-[#6B7280] flex-shrink-0">K F</span>
+                            </div>
+                        </div>
+
+                        {/* Player list */}
+                        <div className="flex-1 overflow-y-auto min-h-0 px-1">
+                            {/* Online */}
+                            <button
+                                type="button"
+                                className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-[#8B8FA3] hover:text-white transition-colors"
+                            >
+                                <span>Online ({filteredOnline.length})</span>
+                                <span className="text-[9px]">▾</span>
+                            </button>
+                            <ul className="space-y-px">
+                                {filteredOnline.map((p) => {
+                                    const isOwner = p.uid === ownerId
+                                    const isYou = p.uid === currentUid
+                                    return (
+                                        <li
+                                            key={p.uid}
+                                            className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors mx-1"
+                                        >
+                                            <div className="relative flex-shrink-0">
+                                                <div
+                                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${isOwner ? 'ring-2 ring-amber-400' : ''}`}
+                                                    style={{ backgroundColor: stringToColor(p.username) }}
+                                                >
+                                                    {p.username.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[#252840]" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-1">
+                                                    <p className="text-xs font-medium text-white truncate">
+                                                        {p.username}
+                                                    </p>
+                                                    {isOwner && (
+                                                        <span className="flex-shrink-0 text-[8px] font-bold px-1 py-px rounded bg-amber-500/20 text-amber-400 uppercase">
+                                                            Owner
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-[#6B7280]">
+                                                    {isYou ? 'You' : 'Active'}
+                                                </p>
+                                            </div>
+                                        </li>
+                                    )
+                                })}
+                            </ul>
+
+                            {/* Offline */}
+                            <button
+                                type="button"
+                                className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-[#8B8FA3] hover:text-white transition-colors mt-1"
+                            >
+                                <span>Offline (0)</span>
+                                <span className="text-[9px]">▾</span>
+                            </button>
+                            <p className="text-[10px] text-[#4B5060] px-3 py-1.5">Chưa có người offline.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </>
+    )
+}
+
+function stringToColor(str: string): string {
+    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#6d28d9']
+    let hash = 0
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    return colors[Math.abs(hash) % colors.length]
+}
+
+export default PlaySidebar

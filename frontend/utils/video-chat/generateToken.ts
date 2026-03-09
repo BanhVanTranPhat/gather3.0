@@ -1,14 +1,13 @@
 'use server'
-import { createClient } from '../auth/server'
 
-/** Không dùng Agora; trả về null (voice/video tắt). Có thể tích hợp WebRTC giống Gather sau. */
-export async function generateToken(channelName: string) {
-  if (!process.env.NEXT_PUBLIC_AGORA_APP_ID || !process.env.APP_CERTIFICATE) {
+/** Không dùng Agora; trả về null (voice/video tắt). Token từ client (localStorage) để tránh import next/headers vào client bundle. */
+export async function generateToken(channelName: string, accessToken: string | null) {
+  if (!process.env.NEXT_PUBLIC_AGORA_APP_ID || !process.env.APP_CERTIFICATE || !accessToken) {
     return null
   }
-  const auth = await createClient()
-  const { data: { session } } = await auth.auth.getSession()
-  if (!session) return null
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+  const meRes = await fetch(`${base}/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!meRes.ok) return null
 
   try {
     const { RtcRole, RtcTokenBuilder } = await import('agora-token')

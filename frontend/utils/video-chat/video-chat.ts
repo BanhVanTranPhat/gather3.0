@@ -2,6 +2,7 @@ import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, IA
 import signal from '../signal'
 import { createHash } from 'crypto'
 import { generateToken } from './generateToken'
+import { getToken } from '../backendApi'
 
 export class VideoChat {
     private client: IAgoraRTCClient = AgoraRTC.createClient({ codec: "vp8", mode: "rtc" })
@@ -112,7 +113,7 @@ export class VideoChat {
         this.channelTimeout = setTimeout(async () => {
             if (channel === this.currentChannel) return
             const uniqueChannelId = this.createUniqueChannelId(realmId, channel)
-            const token = await generateToken(uniqueChannelId)
+            const token = await generateToken(uniqueChannelId, getToken())
             if (!token) return
 
             if (this.client.connectionState === 'CONNECTED') {

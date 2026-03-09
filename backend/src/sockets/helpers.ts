@@ -3,19 +3,28 @@ import { io } from '..'
 
 export function kickPlayer(uid: string, reason: string) {
     const session = sessionManager.getPlayerSession(uid)
+    if (!session) return
+
+    const player = session.getPlayer(uid)
+    if (!player) return
+
     const room = session.getPlayerRoom(uid)
     const players = session.getPlayersInRoom(room)
 
-    for (const player of players) {
-        if (player.uid === uid) {
-            io.to(player.socketId).emit('kicked', reason)
+    for (const p of players) {
+        if (p.uid === uid) {
+            io.to(p.socketId).emit('kicked', reason)
         } else {
-            io.to(player.socketId).emit('playerLeftRoom', uid)
+            io.to(p.socketId).emit('playerLeftRoom', uid)
         }
     }
 
-    const player = session.getPlayer(uid)
-    io.sockets.sockets.get(player.socketId)?.leave(session.id)
-    // player is already in session, kick them
+    const oldSocketId = player.socketId
+    const oldSocket = io.sockets.sockets.get(oldSocketId)
+    if (oldSocket) {
+        oldSocket.leave(session.id)
+        oldSocket.disconnect(true)
+    }
+
     sessionManager.logOutPlayer(uid)
 }

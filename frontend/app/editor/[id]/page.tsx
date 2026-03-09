@@ -18,7 +18,10 @@ export default async function RealmEditor({ params }: { params: { id: string } }
         return <NotFound />
     }
     const realm = data
-    const map_data = realm.map_data 
+    const map_data = realm.map_data ?? {
+        spawnpoint: { roomIndex: 0, x: 0, y: 0 },
+        rooms: [{ name: 'New Room', tilemap: {} }],
+    }
 
     return (
         <div>

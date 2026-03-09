@@ -37,6 +37,7 @@ export interface Player {
     room: number,
     socketId: string,
     skin: string,
+    avatarConfig: Record<string, string> | null,
     proximityId: string | null,
 }
 
@@ -70,8 +71,8 @@ export class SessionManager {
         return this.sessions[realmId]
     }
 
-    public addPlayerToSession(socketId: string, realmId: string, uid: string, username: string, skin: string) {
-        this.sessions[realmId].addPlayer(socketId, uid, username, skin)
+    public addPlayerToSession(socketId: string, realmId: string, uid: string, username: string, skin: string, avatarConfig: Record<string, string> | null = null) {
+        this.sessions[realmId].addPlayer(socketId, uid, username, skin, avatarConfig)
         this.playerIdToRealmId[uid] = realmId
         this.socketIdToPlayerId[socketId] = uid
     }
@@ -132,7 +133,7 @@ export class Session {
         }
     }
 
-    public addPlayer(socketId: string, uid: string, username: string, skin: string) {
+    public addPlayer(socketId: string, uid: string, username: string, skin: string, avatarConfig: Record<string, string> | null = null) {
         this.removePlayer(uid)
         const spawnIndex = this.map_data.spawnpoint.roomIndex
         const spawnX = this.map_data.spawnpoint.x
@@ -146,6 +147,7 @@ export class Session {
             room: spawnIndex,
             socketId: socketId,
             skin,
+            avatarConfig,
             proximityId: null,
         }
 
