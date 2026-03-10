@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CATEGORIES, ASSETS, LAYER_ORDER, DEFAULT_AVATAR_CONFIG } from '@/utils/avatarAssets'
+import { AvatarPreview } from '@/app/components/AvatarPreview'
+import { avatars } from '@/app/config/gatherAssets'
 import SpriteIcon from '@/components/SpriteIcon'
 import { createClient } from '@/utils/auth/client'
 
@@ -104,9 +106,11 @@ export default function AvatarSelection() {
               })}
             </div>
           </div>
-          <div className="mt-6 p-4 rounded-2xl border border-white/10 flex gap-3 overflow-x-auto">
-            {DEMO_COLORS.map((color) => (
-              <div key={color} className="w-8 h-8 rounded-full shrink-0 cursor-pointer border-2 border-white/20" style={{ backgroundColor: color }} />
+          <div className="mt-6 p-4 rounded-2xl border border-white/10 flex gap-3 overflow-x-auto items-center">
+            {avatars.map((avatar) => (
+              <div key={avatar.id} className="shrink-0">
+                <AvatarPreview avatarId={avatar.id} />
+              </div>
             ))}
           </div>
         </div>

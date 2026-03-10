@@ -14,7 +14,10 @@ type CallInfo = {
     realmId: string
 }
 
-type JitsiCallPanelProps = {
+const MAX_CALL_PARTICIPANTS = 20
+const MAX_CALL_DURATION_SECONDS = 20 * 60
+
+type GroupCallPanelProps = {
     username: string
     realmId: string
 }
@@ -66,7 +69,7 @@ function VideoTile({ stream, label, muted }: { stream: MediaStreamTrack | null; 
     )
 }
 
-const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) => {
+const GroupCallPanel: React.FC<GroupCallPanelProps> = ({ username, realmId }) => {
     const [callInfo, setCallInfo] = useState<CallInfo | null>(null)
     const [minimized, setMinimized] = useState(false)
     const [panelSize, setPanelSize] = useState<PanelSize>('normal')
@@ -78,8 +81,24 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
     const [dragging, setDragging] = useState(false)
     const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
     const panelRef = useRef<HTMLDivElement>(null)
-    const timerRef = useRef<NodeJS.Timeout | null>(null)
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const dragStartRef = useRef<{ mouseX: number; mouseY: number; panelX: number; panelY: number } | null>(null)
+
+    function leaveCall() {
+        signal.emit('leaveGroupCall')
+    }
+
+    const toggleMic = useCallback(async () => {
+        const newMicOn = !micOn
+        setMicOn(newMicOn)
+        signal.emit('localMediaState', { micOn: newMicOn, camOn })
+    }, [micOn, camOn])
+
+    const toggleCam = useCallback(async () => {
+        const newCamOn = !camOn
+        setCamOn(newCamOn)
+        signal.emit('localMediaState', { micOn, camOn: newCamOn })
+    }, [micOn, camOn])
 
     useEffect(() => {
         const onJoin = (data: CallInfo) => {
@@ -120,8 +139,25 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
 
     useEffect(() => {
         if (!callInfo) return
-        timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
-        return () => { if (timerRef.current) clearInterval(timerRef.current) }
+        if (timerRef.current) {
+            clearInterval(timerRef.current)
+        }
+        timerRef.current = setInterval(() => {
+            setElapsed((prev) => {
+                const next = prev + 1
+                if (next >= MAX_CALL_DURATION_SECONDS) {
+                    if (timerRef.current) {
+                        clearInterval(timerRef.current)
+                        timerRef.current = null
+                    }
+                    leaveCall()
+                }
+                return next
+            })
+        }, 1000)
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current)
+        }
     }, [callInfo])
 
     useEffect(() => {
@@ -166,21 +202,21 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
         return () => { signal.off('localMediaState', onLocalMedia) }
     }, [callInfo])
 
-    const toggleMic = useCallback(async () => {
-        const newMicOn = !micOn
-        setMicOn(newMicOn)
-        signal.emit('localMediaState', { micOn: newMicOn, camOn })
-    }, [micOn, camOn])
-
-    const toggleCam = useCallback(async () => {
-        const newCamOn = !camOn
-        setCamOn(newCamOn)
-        signal.emit('localMediaState', { micOn, camOn: newCamOn })
-    }, [micOn, camOn])
-
-    const leaveCall = useCallback(() => {
-        signal.emit('leaveGroupCall')
-    }, [])
+    useEffect(() => {
+        if (!callInfo) return
+        const onTooMany = () => {
+            leaveCall()
+        }
+        const onTimedOut = () => {
+            leaveCall()
+        }
+        signal.on('callTooManyParticipants', onTooMany)
+        signal.on('callTimedOut', onTimedOut)
+        return () => {
+            signal.off('callTooManyParticipants', onTooMany)
+            signal.off('callTimedOut', onTimedOut)
+        }
+    }, [callInfo])
 
     const onDragStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault()
@@ -216,6 +252,7 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
 
     const size = PANEL_SIZES[panelSize]
     const participantCount = 1 + remoteStreams.length
+    const callIsFull = participantCount >= MAX_CALL_PARTICIPANTS
 
     const panelStyle: React.CSSProperties = position && !minimized
         ? { position: 'fixed', left: position.x, top: position.y, width: size.w, height: size.h, zIndex: 50 }
@@ -267,7 +304,9 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
                         <span className="flex items-center gap-1 text-white/40 text-[10px] flex-shrink-0">
                             <Users size={10} /> {participantCount}
                         </span>
-                        <span className="text-white/25 text-[10px] flex-shrink-0">{formatTime(elapsed)}</span>
+                        <span className="text-white/25 text-[10px] flex-shrink-0">
+                            {formatTime(Math.min(elapsed, MAX_CALL_DURATION_SECONDS))}
+                        </span>
                     </div>
                     <div className="flex items-center gap-0.5 flex-shrink-0" onMouseDown={e => e.stopPropagation()}>
                         <button onClick={() => setMinimized(true)} className="text-white/40 hover:text-white/80 p-1.5 rounded hover:bg-white/5 transition-colors" title="Minimize">
@@ -311,7 +350,7 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
                         className="px-5 py-2.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors flex items-center gap-2"
                     >
                         <PhoneOff size={16} />
-                        Leave
+                        {callIsFull ? 'Leave (Full)' : 'Leave'}
                     </button>
                 </div>
             </div>
@@ -319,4 +358,4 @@ const JitsiCallPanel: React.FC<JitsiCallPanelProps> = ({ username, realmId }) =>
     )
 }
 
-export default JitsiCallPanel
+export default GroupCallPanel

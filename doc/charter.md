@@ -79,7 +79,7 @@ routes/chat.ts, ChatPanel.tsx
 OBJ-06
 Scalable voice/video
 Cloud SFU via Agora RTC SDK (≥20 users)
-utils/video-chat/video-chat.ts, JitsiCallPanel.tsx
+utils/video-chat/video-chat.ts, GroupCallPanel.tsx
 OBJ-07
 Media state sync
 Mic/cam states and camera bubbles on sprites

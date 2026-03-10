@@ -4,6 +4,9 @@ import { getToken } from '../backendApi'
 
 let AgoraRTC: any = null
 
+const MAX_CALL_PARTICIPANTS = 20
+const MAX_CALL_DURATION_SECONDS = 20 * 60
+
 async function getAgoraRTC() {
     if (!AgoraRTC) {
         const mod = await import('agora-rtc-sdk-ng')
@@ -33,6 +36,9 @@ export class VideoChat {
     private channelTimeout: NodeJS.Timeout | null = null
     private initialized = false
 
+    private callStartAt: number | null = null
+    private callDurationTimer: NodeJS.Timeout | null = null
+
     private async ensureInit() {
         if (this.initialized) return
         const agora = await getAgoraRTC()
@@ -54,6 +60,7 @@ export class VideoChat {
     private onUserJoined = (user: any) => {
         this.remoteUsers[user.uid] = user
         signal.emit('user-info-updated', user)
+        this.enforceParticipantLimit()
     }
 
     public onUserPublished = async (user: any, mediaType: "audio" | "video" | "datachannel", config?: any) => {
@@ -88,6 +95,17 @@ export class VideoChat {
     public onUserLeft = (user: any, reason: string) => {
         delete this.remoteUsers[user.uid]
         signal.emit('user-left', user)
+    }
+
+    private enforceParticipantLimit() {
+        const participantCount = 1 + Object.keys(this.remoteUsers).length
+        if (participantCount > MAX_CALL_PARTICIPANTS) {
+            signal.emit('callTooManyParticipants', {
+                participantCount,
+                maxParticipants: MAX_CALL_PARTICIPANTS,
+            })
+            this.leaveChannel()
+        }
     }
 
     public async toggleCamera(): Promise<MediaStreamTrack | null> {
@@ -197,6 +215,26 @@ export class VideoChat {
             await this.client.join(appId, uniqueChannelId, token, uid)
             this.currentChannel = channel
 
+            if (this.callDurationTimer) {
+                clearInterval(this.callDurationTimer)
+            }
+            this.callStartAt = Date.now()
+            this.callDurationTimer = setInterval(() => {
+                if (!this.callStartAt) return
+                const elapsedSec = Math.floor((Date.now() - this.callStartAt) / 1000)
+                if (elapsedSec >= MAX_CALL_DURATION_SECONDS) {
+                    if (this.callDurationTimer) {
+                        clearInterval(this.callDurationTimer)
+                        this.callDurationTimer = null
+                    }
+                    this.callStartAt = null
+                    signal.emit('callTimedOut', {
+                        maxDurationSeconds: MAX_CALL_DURATION_SECONDS,
+                    })
+                    this.leaveChannel()
+                }
+            }, 1000)
+
             if (this.microphoneTrack && this.microphoneTrack.enabled) {
                 await this.client.publish([this.microphoneTrack])
             }
@@ -211,6 +249,12 @@ export class VideoChat {
             clearTimeout(this.channelTimeout)
         }
 
+        if (this.callDurationTimer) {
+            clearInterval(this.callDurationTimer)
+            this.callDurationTimer = null
+        }
+        this.callStartAt = null
+
         this.channelTimeout = setTimeout(async () => {
             if (this.currentChannel === '') return
 
@@ -224,6 +268,11 @@ export class VideoChat {
     }
 
     public destroy() {
+        if (this.callDurationTimer) {
+            clearInterval(this.callDurationTimer)
+            this.callDurationTimer = null
+        }
+        this.callStartAt = null
         if (this.cameraTrack) {
             this.cameraTrack.stop()
             this.cameraTrack.close()

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useModal } from '@/app/hooks/useModal'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import Image from 'next/image'
 
 type DesktopRealmItemProps = {
     name: string,
@@ -20,6 +21,12 @@ const TEMPLATE_STYLES: Record<string, { bg: string; icon: string }> = {
     blank: { bg: 'from-violet-100 to-purple-200', icon: '📋' },
 }
 
+const TEMPLATE_IMAGES: Record<string, string | null> = {
+    home: '/assets/home_background.png',
+    office: '/assets/office_background.png',
+    blank: null,
+}
+
 const DesktopRealmItem:React.FC<DesktopRealmItemProps> = ({ name, id, shareId, shared, playerCount, mapTemplate }) => {
     
     const [showMenu, setShowMenu] = useState<boolean>(false)  
@@ -28,7 +35,19 @@ const DesktopRealmItem:React.FC<DesktopRealmItemProps> = ({ name, id, shareId, s
     const dotsRef = useRef<HTMLDivElement>(null)
     const { setRealmToDelete, setModal } = useModal()
 
-    const tmpl = TEMPLATE_STYLES[mapTemplate || 'office'] || TEMPLATE_STYLES.office
+    let templateKey = mapTemplate
+    if (!templateKey) {
+        const lowerName = name.toLowerCase()
+        if (lowerName.includes('home')) {
+            templateKey = 'home'
+        } else if (lowerName.includes('office')) {
+            templateKey = 'office'
+        } else {
+            templateKey = 'office'
+        }
+    }
+    const tmpl = TEMPLATE_STYLES[templateKey] || TEMPLATE_STYLES.office
+    const templateImage = TEMPLATE_IMAGES[templateKey] ?? null
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -53,21 +72,38 @@ const DesktopRealmItem:React.FC<DesktopRealmItemProps> = ({ name, id, shareId, s
         <div className='relative select-none group/card'>
             <Link href={getLink()}>
                 <div className='w-full aspect-[16/9] relative rounded-xl overflow-hidden border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer'>
-                    {/* Gradient background */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${tmpl.bg}`} />
-
-                    {/* Grid pattern */}
-                    <div className="absolute inset-0 opacity-[0.15]" style={{
-                        backgroundImage: `linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)`,
-                        backgroundSize: '24px 24px',
-                    }} />
-
-                    {/* Template icon */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-5xl opacity-30 group-hover/card:opacity-50 group-hover/card:scale-110 transform transition-all duration-300">
-                            {tmpl.icon}
-                        </span>
-                    </div>
+                    {/* Background image or gradient fallback */}
+                    {templateImage ? (
+                        <>
+                            <Image
+                                src={templateImage}
+                                alt={`${templateKey} background`}
+                                fill
+                                className="object-cover"
+                                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                                priority={false}
+                            />
+                            {/* Subtle dark overlay for text/overlays */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/20" />
+                        </>
+                    ) : (
+                        <>
+                            <div className={`absolute inset-0 bg-gradient-to-br ${tmpl.bg}`} />
+                            <div
+                                className="absolute inset-0 opacity-[0.15]"
+                                style={{
+                                    backgroundImage:
+                                        'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
+                                    backgroundSize: '24px 24px',
+                                }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-5xl opacity-30 group-hover/card:opacity-50 group-hover/card:scale-110 transform transition-all duration-300">
+                                    {tmpl.icon}
+                                </span>
+                            </div>
+                        </>
+                    )}
 
                     {/* Player count */}
                     {playerCount != null && (

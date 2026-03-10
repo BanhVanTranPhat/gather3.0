@@ -27,7 +27,7 @@ utils/                  # Utility functions, classes, helpers
   ├── video-chat/       # Agora RTC wrapper
   ├── auth/             # Auth utilities
   └── backend/          # Backend API client
-public/                 # Static assets
+public/                 # Static assets (sprites, tiles, gather assets from gathertown/mapmaking)
 ```
 
 ### Backend (`backend/src/`)

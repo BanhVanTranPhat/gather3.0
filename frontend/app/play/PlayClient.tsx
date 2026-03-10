@@ -15,7 +15,7 @@ import ViewSelector from './ViewSelector'
 import ProximityCallPrompt from './ProximityCallPrompt'
 import FocusRoomPanel from './FocusRoomPanel'
 import GitHubPanel from './GitHubPanel'
-import JitsiCallPanel from './JitsiCallPanel'
+import GroupCallPanel from './GroupCallPanel'
 import { useModal } from '../hooks/useModal'
 import signal from '@/utils/signal'
 import IntroScreen from './IntroScreen'
@@ -106,7 +106,7 @@ const PlayClient: React.FC<PlayClientProps> = ({
                         <OverviewMap />
                         <FocusRoomPanel />
                         <GitHubPanel />
-                        <JitsiCallPanel username={username} realmId={realmId} />
+                        <GroupCallPanel username={username} realmId={realmId} />
                         <PixiApp
                             mapData={mapData}
                             className="w-full h-full"

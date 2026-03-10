@@ -1,0 +1,468 @@
+Mình đã chuyển toàn bộ nội dung sang **Markdown (.md)**, giữ cấu trúc SRS rõ ràng với `#`, `##`, bảng Markdown và danh sách. Bạn chỉ cần **copy vào file `SRS.md`** là dùng được (GitHub, Notion, Obsidian, VSCode đều render tốt).
+
+---
+
+# SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+
+## Ignis Guard
+
+**MINISTRY OF EDUCATION AND TRAINING**
+**VAN LANG UNIVERSITY**
+**FACULTY OF MECHATRONICS AND COMPUTER ENGINEERING**
+
+### Capstone Project – Group 15
+
+**Design and Development of a Simulation-Based Game Application for Fire Prevention and Firefighting Training**
+
+**Major:** Software Engineering
+
+**Version:** 1.0
+**Date Created:** January 12, 2026
+
+**Mentor:** MSc. Lã Hoàng Quý
+
+---
+
+# Student Group
+
+| Name            | Student ID    |
+| --------------- | ------------- |
+| Bùi Lê Đức Huy* | 2274801030183 |
+| Bùi Lê Đức Hiếu | 2274801030046 |
+| Lê Tuấn Anh     | 2274801030228 |
+
+---
+
+Ho Chi Minh City – January 12, 2026
+
+---
+
+# REVISION HISTORY
+
+## Project Information Overview
+
+| Item                 | Description                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Project Title        | Design and Development of a Simulation-Based Game Application for Fire Prevention and Firefighting Training |
+| Product Name         | Ignis Guard                                                                                                 |
+| Project Mentor       | Ths. Lã Hoàng Quý                                                                                           |
+| Partner Organization | No external partner organization                                                                            |
+
+### Team Members
+
+| Name            | Student ID    |
+| --------------- | ------------- |
+| Bùi Lê Đức Huy* | 2274801030183 |
+| Bùi Lê Đức Hiếu | 2274801030046 |
+| Lê Tuấn Anh     | 2274801030228 |
+
+---
+
+## Document Information
+
+| Item           | Description                         |
+| -------------- | ----------------------------------- |
+| Document Title | SOFTWARE REQUIREMENTS SPECIFICATION |
+| Version        | 1.0                                 |
+| Date           | 12/01/2026                          |
+
+### Authors and Roles
+
+| Author          | Roles                                                   |
+| --------------- | ------------------------------------------------------- |
+| Bùi Lê Đức Huy  | Team Leader, Unity Programmer, Game Designer, 3D Artist |
+| Bùi Lê Đức Hiếu | Unity Programmer, Game Designer, UI/UX Designer, Writer |
+| Lê Tuấn Anh     | Writer/Content, QA, Game Designer                       |
+
+---
+
+# TABLE OF CONTENTS
+
+1. Introduction
+2. System Context / Overall Description
+3. Business Requirements
+4. User Requirements
+5. System & Software Requirements
+6. Appendix / Reference
+
+---
+
+# 1. INTRODUCTION
+
+## 1.1 Purpose
+
+This Software Requirements Specification (SRS) document describes the requirements of the **Ignis Guard system**, a serious game for firefighting training simulation developed on the Unity platform.
+
+The purpose of this document is to align:
+
+* Scope
+* Behavior
+* Constraints
+* Verification criteria
+
+among:
+
+* Development team
+* Project mentor
+* Evaluation stakeholders
+
+This SRS is used as an input for:
+
+* Software Design Specification (SDS)
+* Test case development
+* Milestone reviews
+* Product completeness assessment
+
+The requirements follow the spirit of **IEEE 830** and are adapted for a **Unity PC-based simulation game**.
+
+---
+
+## 1.2 Scope
+
+**Ignis Guard** is a **first-person firefighting simulation game** where the player acts as a **fire team leader**.
+
+Main gameplay loop:
+
+```
+Call Phase → On-site Phase → Result / Debrief
+```
+
+Player responsibilities:
+
+* Receive emergency call
+* Ask questions
+* Infer incident status
+* Select equipment loadout
+* Coordinate bot teammates
+* Execute firefighting mission
+
+### Capstone Scope
+
+Two playable scenarios:
+
+1. Urban High-rise
+2. Suburban House
+
+Core features:
+
+* Emergency-call Q&A minigame
+* Incident State inference
+* Loadout recommendation
+* SOP-based mission tree
+* Bot command system
+* Safety penalties
+* Debrief with cause-effect timeline
+* Local telemetry logging
+
+### Out of Scope
+
+* Multiplayer / Co-op
+* VR support
+* Mobile version
+* Monetization
+* NLP-based questioning
+* Professional certification training
+
+---
+
+## 1.3 Definitions
+
+| Term           | Definition                                      |
+| -------------- | ----------------------------------------------- |
+| Scenario       | A firefighting mission situation                |
+| Call Phase     | Phase where emergency information is gathered   |
+| Incident State | Incident parameters inferred from call phase    |
+| Loadout        | Equipment set recommended before entering scene |
+| On-site Phase  | First-person mission gameplay                   |
+| Mission Tree   | Main and side objectives generated by rules     |
+| SOP            | Standard Operating Procedure                    |
+| Grade Lock     | Rank limitation caused by safety violations     |
+| Debrief        | Post-mission result screen                      |
+| Telemetry      | Playtest data stored locally                    |
+
+---
+
+## 1.4 Acronyms
+
+| Acronym | Meaning                             |
+| ------- | ----------------------------------- |
+| SRS     | Software Requirements Specification |
+| SDS     | Software Design Specification       |
+| FR      | Functional Requirement              |
+| NFR     | Non-functional Requirement          |
+| SWR     | Software Requirement                |
+| RTM     | Requirement Traceability Matrix     |
+| SOP     | Standard Operating Procedure        |
+| UI      | User Interface                      |
+| HUD     | Heads-Up Display                    |
+| FPS     | First Person                        |
+| QA      | Quality Assurance                   |
+| VFX     | Visual Effects                      |
+| SFX     | Sound Effects                       |
+
+---
+
+## 1.5 References
+
+| ID | Reference                       |
+| -- | ------------------------------- |
+| R1 | BAD / ConOps – Ignis Guard      |
+| R2 | Project Charter                 |
+| R3 | Project Plan                    |
+| R4 | Software Process & Quality Plan |
+| R5 | Capstone Project Guidebook      |
+| R6 | IEEE 830-1998, ISO/IEC 25010    |
+
+---
+
+# 2. SYSTEM CONTEXT / OVERALL DESCRIPTION
+
+## 2.1 Product Perspective
+
+Current firefighting education often relies on:
+
+* Theoretical material
+* Demonstration videos
+* Limited field drills
+
+Limitations:
+
+* Low interactivity
+* Hard to repeat training scenarios
+* Weak cause-effect understanding
+
+Ignis Guard provides a **simulation learning loop**:
+
+```
+Gather Information
+→ Infer Incident
+→ Make Decisions
+→ Take Action
+→ Receive Consequences
+→ Reflect
+```
+
+Primary users:
+
+* Firefighter trainees
+
+Stakeholders:
+
+* Mentors
+* Academic reviewers
+* Development team
+
+System runs as a **standalone local PC application**.
+
+---
+
+## 2.2 Internal Components
+
+| Component                | Responsibility                                      |
+| ------------------------ | --------------------------------------------------- |
+| Game Client              | Menu, tutorial, runtime mission, HUD                |
+| Call Phase Module        | Emergency call questions and information collection |
+| Incident Analysis Engine | Incident inference and loadout recommendation       |
+| Mission Tree Engine      | Objective generation based on SOP                   |
+| Bot AI Module            | Bot coordination and commands                       |
+| Debrief System           | Score, rank, timeline                               |
+| Telemetry Logger         | Store playtest data locally                         |
+
+---
+
+## 2.3 User Classes
+
+| Role                | Description                   |
+| ------------------- | ----------------------------- |
+| Player              | Main user (FFR trainee)       |
+| Dev / QA            | Internal testing and tuning   |
+| Mentor / Instructor | Stakeholder reviewing results |
+
+---
+
+## 2.4 Operating Environment
+
+Runtime:
+
+* **PC / Windows**
+* Keyboard + mouse
+
+Engine:
+
+* **Unity**
+
+Data:
+
+* JSON / CSV / ScriptableObjects
+
+Tools:
+
+* Git
+* Sprint-based builds
+* Demo PC setup
+
+---
+
+## 2.5 Constraints
+
+* Single player only
+* 4 Incident State variables
+* 2 scenarios
+* Local data storage
+* No VR / multiplayer / NLP
+
+---
+
+# 3. BUSINESS REQUIREMENTS
+
+## 3.1 Business Goals
+
+* Provide interactive firefighting simulation
+* Support replayable training
+* Improve tactical decision-making
+* Support educational demos
+
+---
+
+## 3.2 Business Constraints
+
+Project limitations:
+
+* Capstone timeline
+* Limited manpower
+* Standalone PC build
+
+Focus:
+
+* **Playable vertical slice**
+
+---
+
+## 3.3 Success Criteria
+
+| ID    | Criterion                                 |
+| ----- | ----------------------------------------- |
+| SC-01 | Core loop completes without restart       |
+| SC-02 | Two playable scenarios                    |
+| SC-03 | Mission tree and loadout behave correctly |
+| SC-04 | Debrief shows timeline and results        |
+| SC-05 | Telemetry stored locally                  |
+| SC-06 | Demo runs 5 times without crash           |
+
+---
+
+# 4. USER REQUIREMENTS
+
+## 4.1 Use Cases Overview
+
+| ID    | Use Case                | Actor    |
+| ----- | ----------------------- | -------- |
+| UC-01 | Start Game              | Player   |
+| UC-02 | Access Tutorial         | Player   |
+| UC-03 | Select Scenario         | Player   |
+| UC-04 | Ask Emergency Questions | Player   |
+| UC-05 | Review Incident Summary | Player   |
+| UC-06 | Confirm Loadout         | Player   |
+| UC-07 | Enter On-site Phase     | Player   |
+| UC-08 | Movement & Tools        | Player   |
+| UC-09 | Execute Objectives      | Player   |
+| UC-10 | Issue Bot Commands      | Player   |
+| UC-11 | Handle Hazards          | Player   |
+| UC-12 | Receive Debrief         | Player   |
+| UC-13 | Replay / Exit           | Player   |
+| UC-14 | Pause / Resume          | Player   |
+| UC-15 | Configure Settings      | Player   |
+| UC-16 | Review Telemetry        | Dev / QA |
+
+---
+
+# 5. SYSTEM & SOFTWARE REQUIREMENTS
+
+## 5.1 Functional Requirements
+
+| ID    | Requirement                        |
+| ----- | ---------------------------------- |
+| FR-01 | Simulate hazards and rescue events |
+| FR-02 | Provide tutorial                   |
+| FR-03 | Allow scenario selection           |
+| FR-04 | Provide Call Phase questions       |
+| FR-05 | Update notepad automatically       |
+| FR-06 | Infer Incident State               |
+| FR-07 | Generate loadout                   |
+| FR-08 | Enter On-site Phase                |
+| FR-09 | Support FPS gameplay               |
+| FR-10 | Generate mission tree              |
+| FR-11 | Support bot commands               |
+| FR-12 | Simulate hazards                   |
+| FR-13 | Provide Debrief                    |
+| FR-14 | Allow replay                       |
+| FR-15 | Pause / Resume                     |
+| FR-16 | Settings system                    |
+| FR-17 | Local telemetry logging            |
+| FR-18 | Safety penalty system              |
+
+---
+
+## 5.2 Non-Functional Requirements
+
+| ID     | Category        | Requirement          |
+| ------ | --------------- | -------------------- |
+| NFR-01 | Performance     | ≥60 FPS average      |
+| NFR-02 | Usability       | UI readable at 1080p |
+| NFR-03 | Stability       | 5 runs without crash |
+| NFR-04 | Bot Robustness  | Pathfinding fallback |
+| NFR-05 | Maintainability | Configurable data    |
+| NFR-06 | Learnability    | Tutorial < 5 minutes |
+| NFR-07 | Compatibility   | Windows 10/11        |
+
+---
+
+## 5.3 External Interfaces
+
+| ID    | Interface               |
+| ----- | ----------------------- |
+| IF-01 | Keyboard / Mouse        |
+| IF-02 | Call Phase UI           |
+| IF-03 | On-site HUD             |
+| IF-04 | Bot Command UI          |
+| IF-05 | Audio / Visual feedback |
+| IF-06 | Local data storage      |
+
+---
+
+# 6. APPENDIX
+
+## 6.1 Glossary
+
+| Term           | Meaning                      |
+| -------------- | ---------------------------- |
+| Scenario       | Firefighting mission         |
+| Call Phase     | Information gathering stage  |
+| Incident State | Incident condition variables |
+| On-site Phase  | Gameplay phase               |
+| Mission Tree   | Objectives                   |
+| SOP            | Safety procedures            |
+| Grade Lock     | Rank limitation              |
+| Debrief        | Result screen                |
+
+---
+
+## 6.2 Requirement Traceability Matrix
+
+| Business Goal       | Use Case     | FR           | SWR      |
+| ------------------- | ------------ | ------------ | -------- |
+| BG-01 Training      | UC-02, UC-08 | FR-02, FR-09 | SWR-G-04 |
+| BG-02 Learning loop | UC-04        | FR-04        | SWR-G-01 |
+| BG-03 Coordination  | UC-09        | FR-10        | SWR-A-01 |
+| BG-04 Replay        | UC-12        | FR-13        | SWR-U-04 |
+| BG-05 Playtest      | UC-16        | FR-17        | SWR-A-03 |
+
+---
+
+## Next Steps
+
+* Software Design Specification (SDS)
+* Architecture Design
+* Test Case Specification
+* Maintain RTM traceability
+

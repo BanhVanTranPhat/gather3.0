@@ -147,7 +147,7 @@ gather-clone/
 │   │   ├── video-chat/       # Agora RTC wrapper
 │   │   ├── auth/             # Auth client
 │   │   └── backend/          # Backend API client
-│   └── public/               # Static assets (sprites, tiles)
+│   └── public/               # Static assets (sprites, tiles, gather assets)
 │
 ├── backend/                  # Express.js API
 │   ├── src/

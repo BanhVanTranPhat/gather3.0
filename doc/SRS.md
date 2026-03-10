@@ -939,7 +939,7 @@ erDiagram
 | FR-13 | — | `sendMessage`, `receiveMessage` | — | Player.ts (bubble) |
 | FR-14..17 | `/chat/*` | `chatMessage`, `chatTyping` | ChatChannel, ChatMessage | ChatPanel.tsx |
 | FR-18..22 | — | `proximityUpdate`, `callRequest/Response`, `mediaState` | — | ProximityCallPrompt, video-chat.ts, Player.ts |
-| FR-23 | — | — | — | JitsiCallPanel.tsx (Agora-based) |
+| FR-23 | — | — | — | GroupCallPanel.tsx (Agora-based) |
 | FR-24 | `/events/*` | — | Event | CalendarPanel.tsx |
 | FR-25 | `/resources/*` | — | Resource | LibraryPanel.tsx |
 | FR-26 | `/forum/*` | — | Thread, Post | ForumPanel.tsx |
@@ -960,7 +960,7 @@ erDiagram
 
 3. **Sidebar Layout**: Dùng flex layout thay vì fixed positioning để tránh sidebar biến mất khi browser zoom.
 
-4. **File Naming**: `JitsiCallPanel.tsx` thực tế là Agora-based video call panel (tên file chưa đổi từ migration Jitsi → Agora).
+4. **File Naming**: `GroupCallPanel.tsx` là Agora-based video call panel (đã đổi tên từ `JitsiCallPanel.tsx` sau migration Jitsi → Agora).
 
 5. **Offline Member Names**: Name resolution fallback: `Profile.displayName` → `User.displayName` → `formatEmailToName(User.email)` → `id.slice(0,8)`.
 

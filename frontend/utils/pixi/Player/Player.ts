@@ -358,8 +358,14 @@ export class Player {
         const bubble = new PIXI.Container()
         bubble.y = Player.BUBBLE_Y
 
+        const shadow = new PIXI.Graphics()
+        shadow.circle(0, 2, R + 3)
+        shadow.fill(0x000000)
+        shadow.alpha = 0.35
+        bubble.addChild(shadow)
+
         const border = new PIXI.Graphics()
-        border.circle(0, 0, R + 1.5)
+        border.circle(0, 0, R + 2)
         border.fill(borderColor)
         bubble.addChild(border)
 
@@ -383,12 +389,21 @@ export class Player {
         sprite.width = R * 2
         sprite.height = R * 2
         sprite.mask = maskGfx
+        sprite.y = 0
         bubble.addChild(sprite)
         this.videoSprite = sprite
 
         this.videoUpdateTimer = setInterval(() => {
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
-                ctx.drawImage(video, 0, 0, dim, dim)
+                const vw = video.videoWidth || video.width
+                const vh = video.videoHeight || video.height
+                if (vw && vh) {
+                    const srcSize = Math.min(vw, vh)
+                    const sx = (vw - srcSize) / 2
+                    const sy = (vh - srcSize) / 2.2
+                    ctx.clearRect(0, 0, dim, dim)
+                    ctx.drawImage(video, sx, sy, srcSize, srcSize, 0, 0, dim, dim)
+                }
                 source.update()
             }
         }, 1000 / 15)
