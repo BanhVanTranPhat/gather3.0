@@ -93,30 +93,35 @@ export class Player {
 
     private async loadAnimations() {
         let spriteSheetTexture: PIXI.Texture | null = null
-        let usedComposedAvatar = false
+        let useLpc = false
+
         const configToUse = this.avatarConfig && Object.keys(this.avatarConfig).length > 0
             ? this.avatarConfig
             : DEFAULT_AVATAR_CONFIG
 
-        if (configToUse) {
+        const tryCompose = async (cfg: Record<string, string>) => {
             try {
-                const canvas = await composeAvatarSpriteSheetCanvas({ avatarConfig: configToUse })
+                const canvas = await composeAvatarSpriteSheetCanvas({ avatarConfig: cfg })
                 if (canvas) {
                     spriteSheetTexture = PIXI.Texture.from(canvas)
-                    usedComposedAvatar = true
+                    useLpc = true
                 }
             } catch (e) {
                 console.warn('Failed to compose avatar spritesheet.', e)
             }
         }
 
+        await tryCompose(configToUse)
+
         if (!spriteSheetTexture) {
-            const src = `/sprites/characters/Character_${this.skin}.png`
-            await PIXI.Assets.load(src)
-            spriteSheetTexture = PIXI.Texture.from(src)
+            await tryCompose(DEFAULT_AVATAR_CONFIG)
         }
 
-        const useLpc = usedComposedAvatar
+        if (!spriteSheetTexture) {
+            // Fallback: simple placeholder texture so avatar is still visible
+            spriteSheetTexture = PIXI.Texture.WHITE
+            useLpc = true
+        }
 
         const spriteSheetData = useLpc
             ? JSON.parse(JSON.stringify(lpcPlayerSpriteSheetData))

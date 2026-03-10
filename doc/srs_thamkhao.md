@@ -27,9 +27,9 @@ Mình đã chuyển toàn bộ nội dung sang **Markdown (.md)**, giữ cấu t
 
 | Name            | Student ID    |
 | --------------- | ------------- |
-| Bùi Lê Đức Huy* | 2274801030183 |
-| Bùi Lê Đức Hiếu | 2274801030046 |
-| Lê Tuấn Anh     | 2274801030228 |
+| Pham Nguyen Thien Loc | 2274801030183 |
+| Le Tan Dat| 2274801030046 |
+| Banh Van Tran Phat   | 2274801030228 |
 
 ---
 
