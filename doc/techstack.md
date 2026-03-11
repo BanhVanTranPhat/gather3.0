@@ -29,6 +29,46 @@
          └──────────┘           └──────────────┘
 ```
 
+### 1.1 Component-level view
+
+```mermaid
+flowchart LR
+  subgraph frontend[Frontend - Next.js 14]
+    landing[app/landing]
+    signin[app/signin]
+    dashboard[app/app]
+    play[app/play]
+    editor[app/editor]
+    adminPage[app/admin]
+    profilePage[app/profile]
+
+    subgraph utils[utils/]
+      pixi[pixi/ (PlayApp, Player, Map)]
+      videoChat[video-chat/ (Agora wrapper)]
+      authClient[auth/ client]
+      backendClient[backend/ API client]
+    end
+  end
+
+  subgraph backend[Backend - Express.js]
+    routes[routes/ (auth, realms, chat, events, resources, forum, admin)]
+    models[models/ (User, Profile, Realm, Event, Resource, Thread, Post)]
+    sockets[sockets/ (Socket.IO handlers)]
+  end
+
+  db[(MongoDB)]
+  agora[Agora Cloud SFU]
+
+  frontend --> backend
+  backend --> db
+  play --> pixi
+  play --> videoChat
+  play --> sockets
+  dashboard --> backendClient
+  signin --> authClient
+  videoChat --> agora
+```
+
 ---
 
 ## 2. Frontend
@@ -39,9 +79,9 @@
 | **React** | 18.2.0 | UI Library | Ecosystem lớn nhất, component-based architecture, hooks API mạnh mẽ, phù hợp với SPA phức tạp. |
 | **TypeScript** | ~5.4.5 | Type system | Giúp phát hiện lỗi compile-time, tăng DX với IntelliSense, đảm bảo type-safety cho codebase lớn. |
 | **Tailwind CSS** | 3.4.1 | Styling | Utility-first CSS, tăng tốc styling, đảm bảo consistency UI, dễ responsive và theme. |
-| **PixiJS** | 8.1.0 | 2D Game Engine | Hiệu năng cao cho rendering sprite, tilemap, animation. Nhẹ hơn Phaser cho use case 2D đơn giản, API hiện đại (v8). |
-| **Agora RTC SDK** | 4.22.1 | Audio/Video | Cloud-based SFU, không cần tự deploy media server. Hỗ trợ ≥100 participants, SDK ổn định, free tier đủ cho MVP. |
-| **Socket.IO Client** | 4.7.5 | Real-time | Tương thích Socket.IO server, auto-reconnect, fallback polling, event-based messaging đơn giản. |
+| **PixiJS** | 8.1.0 | 2D Game Engine | Hiệu năng cao cho rendering sprite, tilemap, animation (avatar movement, camera bubbles, map editor view). Nhẹ hơn Phaser cho use case 2D đơn giản, API hiện đại (v8). |
+| **Agora RTC SDK** | 4.22.1 | Audio/Video | Cloud-based SFU, không cần tự deploy media server. Hỗ trợ ≥100 participants, SDK ổn định, free tier đủ cho MVP. Dùng cho proximity calls và group calls. |
+| **Socket.IO Client** | 4.7.5 | Real-time | Tương thích Socket.IO server, auto-reconnect, fallback polling, event-based messaging đơn giản (movement, chat, calendar updates). |
 | **Framer Motion** | 12.35.1 | Animation (UI) | Declarative animation API cho React, hỗ trợ layout animation, gesture, page transitions cho landing page. |
 | **GSAP** | 3.12.5 | Animation (Advanced) | Timeline-based animation mạnh mẽ, scroll triggers cho landing page sections, performance cao. |
 | **Chart.js** | 4.5.1 | Data Visualization | Charts cho admin dashboard (bar, line, doughnut). Nhẹ, dễ integrate với React qua `react-chartjs-2`. |
@@ -88,7 +128,7 @@
 | **Realm** | Không gian ảo | name, owner_id, map_data, mapTemplate, share_id, only_owner |
 | **ChatChannel** | Kênh chat | realmId, name, type (channel/dm), members |
 | **ChatMessage** | Tin nhắn | channelId, senderId, senderName, content, timestamp |
-| **Event** | Sự kiện/lịch | realmId, title, startTime, endTime, attendees, maxParticipants |
+| **Event** | Sự kiện/lịch (Calendar) | realmId, title, startTime, endTime, attendees, maxParticipants, RSVP status |
 | **Thread** | Bài viết forum | realmId, title, body, authorId, postCount |
 | **Post** | Trả lời forum | threadId, body, authorId, authorName |
 | **Resource** | Tài nguyên thư viện | realmId, title, content_type, url, description |

@@ -4,21 +4,21 @@
 
 ---
 
-## 1. Ngôn ngữ & Công cụ
+## 1. Language & tools
 
-- **TypeScript** là ngôn ngữ duy nhất cho cả frontend và backend. Không viết `.js` trừ config files (next.config.js, tailwind.config.js).
-- **Yarn** là package manager chính. Không dùng `npm` để tránh lockfile conflict.
-- **ESLint** + **TypeScript strict mode** để đảm bảo code quality.
+- **TypeScript** is the only language for both frontend and backend. Do not write `.js` except for config files (next.config.js, tailwind.config.js).
+- **Yarn** is the primary package manager. Do not use `npm` to avoid lockfile conflicts.
+- Use **ESLint** + **TypeScript strict mode** to ensure code quality.
 
 ---
 
-## 2. Cấu trúc thư mục
+## 2. Folder structure
 
 ### Frontend (`frontend/`)
 
 ```
 app/                    # Next.js App Router pages
-  ├── [feature]/        # Mỗi feature là 1 folder (play/, admin/, editor/...)
+  ├── [feature]/        # Each feature gets its own folder (play/, admin/, editor/…)
   │   ├── page.tsx      # Route entry
   │   └── [Component].tsx  # Feature-specific components
 components/             # Shared/reusable components
@@ -43,11 +43,11 @@ auth.ts       # JWT middleware
 
 ---
 
-## 3. Quy tắc đặt tên
+## 3. Naming rules
 
 ### Files & Folders
 
-| Loại | Convention | Ví dụ |
+| Type | Convention | Example |
 |---|---|---|
 | React component | PascalCase | `PlaySidebar.tsx`, `ChatPanel.tsx` |
 | Utility / helper | camelCase | `generateToken.ts`, `formatEmailToName.ts` |
@@ -57,9 +57,9 @@ auth.ts       # JWT middleware
 | CSS / Style | kebab-case hoặc module | `globals.css` |
 | Constants | camelCase file, UPPER_SNAKE content | `constants.tsx` → `MAX_PLAYERS = 30` |
 
-### Variables & Functions
+### Variables & functions
 
-| Loại | Convention | Ví dụ |
+| Type | Convention | Example |
 |---|---|---|
 | Variable | camelCase | `playerCount`, `isConnected` |
 | Function | camelCase | `handleJoinRealm()`, `toggleCamera()` |
@@ -74,7 +74,7 @@ auth.ts       # JWT middleware
 
 ### Database
 
-| Loại | Convention | Ví dụ |
+| Type | Convention | Example |
 |---|---|---|
 | Collection name | lowercase plural (auto by Mongoose) | `users`, `realms`, `chatmessages` |
 | Field name | camelCase | `displayName`, `createdAt`, `mapTemplate` |
@@ -82,42 +82,42 @@ auth.ts       # JWT middleware
 
 ---
 
-## 4. Quy tắc Code Style
+## 4. Code style guidelines
 
 ### TypeScript
 
-- Strict mode bật (`strict: true` trong tsconfig)
-- Không dùng `any` trừ khi thật sự cần thiết (ghi comment lý do)
-- Prefer `interface` cho object shapes, `type` cho unions/intersections
-- Sử dụng `readonly` cho props không thay đổi
-- Destructure parameters khi ≥2 props
+- `strict: true` must be enabled in `tsconfig`.
+- Avoid `any` unless strictly necessary (and explain why in a comment).
+- Prefer `interface` for object shapes, `type` for unions/intersections.
+- Use `readonly` for props and fields that should not change.
+- Destructure parameters when there are ≥2 props.
 
 ### React
 
-- Functional components only (không dùng class components)
-- Hooks: `useState`, `useEffect`, `useRef`, `useCallback`, `useMemo`
-- Tách logic phức tạp vào custom hooks (`hooks/`)
-- `'use client'` directive chỉ khi component cần client-side features
-- Tránh `useEffect` cho derived state — dùng computed values hoặc `useMemo`
+- Functional components only (no class components).
+- Use hooks: `useState`, `useEffect`, `useRef`, `useCallback`, `useMemo`.
+- Extract complex logic into custom hooks (`hooks/`).
+- Use the `'use client'` directive only when the component truly needs client-side features.
+- Avoid `useEffect` for derived state – prefer computed values or `useMemo`.
 
-### Express (Backend)
+### Express (backend)
 
-- Mỗi route file export 1 `Router`
-- Middleware authenticate (`requireAuth`) áp dụng per-route, không global
-- Validation bằng Zod schemas trước khi xử lý business logic
-- Error handling: `express-async-errors` wrap, custom error middleware
-- Response format nhất quán: `{ success: boolean, data?, message?, error? }`
+- Each route file exports a single `Router`.
+- Authentication middleware (`requireAuth`) is applied per route, not globally.
+- Validate all inputs using Zod schemas before business logic.
+- Use `express-async-errors` and a custom error middleware for consistent error handling.
+- Response format should be consistent: `{ success: boolean, data?, message?, error? }`.
 
 ### Socket.IO
 
-- Event names: camelCase (`joinRealm`, `playerMoved`)
-- Validate payload bằng Zod trước khi xử lý
-- Server-authoritative state: client gửi intent, server validate và broadcast
-- Debounce movement events phía server để giảm traffic
+- Event names: camelCase (e.g. `joinRealm`, `playerMoved`).
+- Validate all payloads with Zod before processing.
+- Keep the server authoritative: clients send intents, server validates and broadcasts.
+- Debounce movement events on the server to reduce traffic.
 
 ---
 
-## 5. Git Workflow
+## 5. Git workflow
 
 ### Branch Strategy
 
@@ -129,13 +129,13 @@ main                    # Production-ready code
 │   └── hotfix/xxx      # Urgent production fixes
 ```
 
-| Branch | Mô tả | Merge vào |
+| Branch | Description | Merge into |
 |---|---|---|
-| `main` | Code ổn định, demo-ready | — |
-| `develop` | Tích hợp features mới | `main` (khi release) |
-| `feature/[name]` | Phát triển tính năng | `develop` |
-| `fix/[name]` | Sửa bug | `develop` |
-| `hotfix/[name]` | Sửa bug khẩn cấp | `main` + `develop` |
+| `main` | Stable, demo-ready code | — |
+| `develop` | Integrates new features | `main` (when releasing) |
+| `feature/[name]` | Develop a feature | `develop` |
+| `fix/[name]` | Fix a bug | `develop` |
+| `hotfix/[name]` | Urgent production fix | `main` + `develop` |
 
 ### Branch Naming
 
@@ -147,9 +147,18 @@ fix/camera-visibility
 hotfix/auth-token-expire
 ```
 
+```mermaid
+flowchart LR
+  devs[Developers] --> featureBranch[feature/* or fix/* branch]
+  featureBranch --> pr[Pull Request on GitHub]
+  pr --> review[Code review]
+  review -->|approved| developBranch[develop branch]
+  developBranch --> mainBranch[main branch (demo-ready)]
+```
+
 ---
 
-## 6. Commit Convention
+## 6. Commit convention
 
 Format: **Conventional Commits**
 
@@ -162,12 +171,12 @@ Format: **Conventional Commits**
 
 ### Types
 
-| Type | Mô tả | Ví dụ |
+| Type | Description | Example |
 |---|---|---|
-| `feat` | Tính năng mới | `feat(chat): add DM channel support` |
-| `fix` | Sửa bug | `fix(player): resolve camera bubble position` |
-| `refactor` | Tái cấu trúc (không thay đổi behavior) | `refactor(sidebar): switch from fixed to flex layout` |
-| `style` | Thay đổi UI/CSS (không logic) | `style(navbar): update button colors` |
+| `feat` | New feature | `feat(chat): add DM channel support` |
+| `fix` | Bug fix | `fix(player): resolve camera bubble position` |
+| `refactor` | Refactoring without behavior change | `refactor(sidebar): switch from fixed to flex layout` |
+| `style` | UI/CSS change, no logic | `style(navbar): update button colors` |
 | `docs` | Documentation | `docs: update techstack.md` |
 | `chore` | Maintenance, config, dependencies | `chore: update TypeScript to 5.4.5` |
 | `perf` | Performance optimization | `perf(pixi): reduce video frame rate to 15fps` |
@@ -181,11 +190,11 @@ Format: **Conventional Commits**
 
 ### Rules
 
-- Subject line ≤ 72 ký tự
-- Viết bằng tiếng Anh
-- Dùng imperative mood: "add", "fix", "update" (không dùng "added", "fixes", "updated")
-- Không kết thúc bằng dấu chấm
-- Body (nếu có): giải thích WHY, không phải WHAT
+- Subject line ≤ 72 characters.
+- Use English.
+- Use imperative mood: `add`, `fix`, `update` (not `added`, `fixes`, `updated`).
+- Do not end the subject line with a period.
+- If you include a body, explain **why**, not just **what**.
 
 ### Ví dụ
 
@@ -207,30 +216,30 @@ when an active Agora remote video track exists.
 
 ---
 
-## 7. Code Review Checklist
+## 7. Code review checklist
 
-Trước khi merge PR, reviewer kiểm tra:
+Before merging a PR, the reviewer should check:
 
-- [ ] TypeScript compile không lỗi
-- [ ] Không có `any` không cần thiết
-- [ ] Naming conventions nhất quán
-- [ ] Không có hardcoded values (dùng constants/env)
-- [ ] Input validation (Zod) cho API endpoints và socket events
-- [ ] Error handling đầy đủ (try/catch, error responses)
-- [ ] Không có console.log dư thừa (chỉ giữ error logging)
-- [ ] UI responsive ở mức cơ bản
-- [ ] Không phá vỡ tính năng hiện có (regression)
-- [ ] Commit messages đúng convention
+- [ ] TypeScript compiles without errors.
+- [ ] There is no unnecessary `any`.
+- [ ] Naming conventions are consistent.
+- [ ] There are no unexplained hardcoded values (use constants/env).
+- [ ] Input validation (Zod) is applied to API endpoints and socket events.
+- [ ] Error handling is complete (try/catch, error responses).
+- [ ] There are no leftover `console.log` statements (keep only error logging).
+- [ ] UI is at least basically responsive.
+- [ ] Existing features are not broken (no regression).
+- [ ] Commit messages follow the convention.
 
 ---
 
-## 8. Environment Variables
+## 8. Environment variables
 
-### Quy tắc
+### Rules
 
-- Sensitive values (API keys, secrets): chỉ trong `.env` / `.env.local`, KHÔNG commit
-- Public values (frontend): prefix `NEXT_PUBLIC_`
-- `.env.example` phải có danh sách tất cả biến cần thiết (với giá trị mẫu)
+- Sensitive values (API keys, secrets): only in `.env` / `.env.local`, **never** committed.
+- Public values (frontend): prefix with `NEXT_PUBLIC_`.
+- `.env.example` must list all required variables with sample values.
 
 ### Frontend (.env.local)
 
@@ -256,24 +265,35 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 
 ---
 
-## 9. Quy tắc bảo mật
+## 9. Security rules
 
-1. **Input validation**: Mọi request body, query params, socket payloads phải qua Zod validation
-2. **Rate limiting**: Auth endpoints giới hạn 5 requests/15 phút
-3. **Password**: Hash bằng bcrypt (10 rounds), không lưu plain text
-4. **JWT**: Access token TTL 7 ngày, không expose secret
-5. **CORS**: Chỉ allow `CLIENT_URL`, không dùng wildcard `*` trên production
-6. **File upload**: Nếu có, giới hạn 10MB, whitelist mime types
-7. **NoSQL injection**: Validate IDs là string/UUID, không accept objects trong query
-8. **XSS**: Sanitize user-generated content trước khi render
+1. **Input validation**: All request bodies, query params, and socket payloads must be validated with Zod.
+2. **Rate limiting**: Auth endpoints limited to 5 requests per 15 minutes.
+3. **Password**: Hash with bcrypt (10 rounds); never store plain text.
+4. **JWT**: Access token TTL 7 days; never expose the secret.
+5. **CORS**: Only allow `CLIENT_URL`; never use wildcard `*` in production.
+6. **File upload**: If enabled, limit to 10MB and whitelist mime types.
+7. **NoSQL injection**: Validate IDs as strings/UUID; do not accept objects in query parameters.
+8. **XSS**: Sanitize all user-generated content before rendering.
 
 ---
 
-## 10. Performance Guidelines
+## 10. Performance guidelines
 
-1. **MongoDB**: Index trên các field query thường xuyên (`realmId`, `channelId`, `timestamp`)
-2. **Pagination**: Mọi list endpoint phải hỗ trợ pagination, limit tối đa 500 items
-3. **Socket.IO**: Throttle movement events (tối đa 10/s), batch updates khi có thể
-4. **PixiJS**: Limit video frame update 15fps (canvas-based), cleanup textures khi player leave
-5. **Agora**: Lazy join channel (chỉ khi proximity detected), leave khi rời xa
-6. **Frontend**: Lazy load components cho routes ít dùng (admin, editor)
+1. **MongoDB**: Add indexes on frequently queried fields (`realmId`, `channelId`, `timestamp`).
+2. **Pagination**: All list endpoints must support pagination, with a maximum of 500 items per page.
+3. **Socket.IO**: Throttle movement events (max 10/s) and batch updates when possible.
+4. **PixiJS**: Limit video frame updates to 15fps (canvas-based) and clean up textures when a player leaves.
+5. **Agora**: Join channels lazily (only when proximity is detected), leave as soon as the user moves away.
+6. **Frontend**: Lazy-load components for less frequently used routes (admin, editor).
+
+---
+
+## 11. Team responsibilities (for reviewers)
+
+| Member | Focus areas |
+|---|---|
+| **Phạm Nguyễn Thiên Lộc (Leader)** | Planning, coordination, overall architecture, final presentation lead |
+| **Lê Tấn Đạt** | Authentication, user profile, avatar customization (avatar editor + in-game `avatarConfig` integration) |
+| **Lê Thới Duy** | Events & Calendar (backend `/events` APIs, `CalendarPanel.tsx` UI, event data model) |
+| **Bành Văn Trần Phát** | Core gameplay (PixiJS map, `PlayApp`, `Player`), real-time Socket.IO flows, Agora integration, chat, map editor, admin dashboard, library, forum, and integration work |

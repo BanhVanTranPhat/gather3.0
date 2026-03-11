@@ -4,7 +4,15 @@ Project Title
 
 Project Context & Motivation
 Modern collaboration increasingly takes place in remote environments. However, conventional video-conferencing tools lack spatial presence and offer limited support for informal interaction (e.g., hallway conversations, ad-hoc small group discussions).
-This capstone project addresses these limitations by implementing a web-based virtual collaboration space, where users are represented as avatars navigating a shared 2D environment. Communication is influenced by proximity (nearby chat) and supported by structured channels and scalable voice/video conferencing.
+The original client brief for The Gathering (see `techbrief.md`) also highlights concrete product gaps:
+
+- Users need a web interface with sign-up/login, verification and profile management.
+- They need an **Events booking & management** experience with a shared calendar and automated communication.
+- They need a **digital public library** for community resources (guides, ebooks, courses).
+- They need a **community forum** and (optionally) a **service directory** for services offered by members.
+
+This capstone project addresses these limitations by implementing a web-based virtual collaboration space, where users are represented as avatars navigating a shared 2D environment. Communication is influenced by proximity (nearby chat) and supported by structured channels and scalable voice/video conferencing, Events & Calendar, Resource Library, Forum and (future) Service Directory.
+
 From a software engineering perspective, the project integrates several advanced domains:
 Real-time systems: Socket.IO–based presence tracking, chat events, and state synchronization
 
@@ -49,6 +57,30 @@ Real-time communication (chat + voice/video)
 
 
 This approach enables more engaging and natural collaboration than traditional video-call-only solutions.
+
+Problem–Solution Overview (from tech brief to implementation):
+
+```mermaid
+flowchart LR
+  P1["Pain: scattered tools (video + calendar + resources + forum)"]
+  P2["Pain: no spatial presence or informal interaction"]
+  P3["Pain: no unified place for community events & content"]
+
+  S1["Virtual office (PixiJS map, avatars, proximity)"]
+  S2["Events & Calendar (events API + CalendarPanel)"]
+  S3["Resource Library (guides, ebooks, courses)"]
+  S4["Community Forum (threads & replies)"]
+  S5["Integrated audio/video calls (Agora)"]
+
+  P1 --> S2
+  P1 --> S3
+  P1 --> S4
+  P2 --> S1
+  P2 --> S5
+  P3 --> S2
+  P3 --> S3
+  P3 --> S4
+```
 
 
 Specific Objectives (Aligned with the Implemented Codebase)
@@ -206,22 +238,31 @@ Local demo package
 .env examples, run scripts, sample data
 
 
-5️⃣ Stakeholders & Nhân sự
+5️⃣ Stakeholders & Team
 Stakeholder
-Vai trò
-Trách nhiệm / Success Criteria
-Giảng viên hướng dẫn (Mentor)
+Role
+Responsibility / Success Criteria
+Supervising Lecturer (Mentor)
 Guidance & review
-Architectural correctness, phản biện kỹ thuật
-Project Manager (PM)
-Điều phối, theo dõi tiến độ
-Sprint planning, risk tracking, báo cáo
+Architectural correctness, technical feedback
+Project Leader – Phạm Nguyễn Thiên Lộc
+Planning & coordination
+Timeline, scope, risk tracking, final presentation lead
+Developer – Lê Tấn Đạt
+Authentication & avatar customization
+Login/OTP/OAuth flows, avatar editor & in-game avatar rendering
+Developer – Lê Thới Duy
+Events & Calendar
+Calendar UI, event CRUD & RSVP, Calendar-related APIs
+Developer – Bành Văn Trần Phát
+Core platform & remaining features
+Realtime movement, chat, video calls, map editor, admin, library, forum, and integration work
 Capstone Team (Development Team)
 Implementation
 Stability & completeness; Frontend, Backend, Realtime
-Khách hàng / Product Owner
-Đại diện yêu cầu (nếu có)
-Acceptance criteria, ưu tiên backlog
+Customer / Product Owner
+Requirements representative (if any)
+Acceptance criteria, backlog prioritization
 End Users
 Demo users
 Usability & reliability
@@ -232,21 +273,21 @@ Maintainer (future)
 Maintenance
 Code clarity & documentation
 
-**Tài nguyên hỗ trợ:** Server local, MongoDB, môi trường dev (Node.js 20+, Yarn). Agora free tier (10,000 phút/tháng) cho audio/video.
+**Support resources:** Local server, MongoDB, dev environment (Node.js 20+, Yarn). Agora free tier (10,000 minutes/month) for audio/video.
 
 
-6️⃣ Hướng tiếp cận & Phương pháp phát triển
-Phương pháp: **Agile / Scrum**
+6️⃣ Approach & Development Methodology
+Methodology: **Agile / Scrum**
 
-| Hạng mục | Mô tả |
+| Item | Description |
 | -------- | ----- |
-| Sprint | 2 tuần / sprint |
-| Sprint Planning | Đầu mỗi sprint: chọn user stories từ backlog, ước lượng, commit scope |
-| Daily Scrum | Standup ngắn (15 phút): đã làm gì, sẽ làm gì, blockers |
-| Sprint Review | Cuối sprint: demo increment, thu thập feedback |
-| Sprint Retrospective | Cải thiện quy trình, điều chỉnh Definition of Done |
-| Backlog | GitHub Projects / Kanban; ưu tiên theo MoSCoW |
-| Definition of Done | Feature hoàn thành + không lỗi TypeScript + docs cập nhật |
+| Sprint | 2 weeks / sprint |
+| Sprint Planning | Start of each sprint: select user stories from backlog, estimate effort, commit scope |
+| Daily Scrum | Short standup (15 mins): what was done, what will be done, blockers |
+| Sprint Review | End of sprint: demo the increment, gather feedback |
+| Sprint Retrospective | Improve the development process, adjust Definition of Done |
+| Backlog | GitHub Projects / Kanban; prioritized using MoSCoW |
+| Definition of Done | Feature completed + no TypeScript errors + docs updated |
 
 
 7️⃣ Assumptions, Constraints & Success Criteria
@@ -342,16 +383,16 @@ Commit convention
 Conventional Commits (see rules.md)
 
 
-🔟 Lịch trình sơ bộ (High-Level Timeline)
-| Giai đoạn | Mô tả | Thời gian |
+🔟 High-Level Timeline
+| Phase | Description | Timeframe |
 | --------- | ----- | ------- |
-| Phase 1 – Foundation | Auth, DB setup, map cơ bản, space CRUD | Sprint 1 (01/03 – 14/03) |
+| Phase 1 – Foundation | Auth, DB setup, basic map, space CRUD | Sprint 1 (29/02 – 14/03) |
 | Phase 2 – Core Real-time | Multiplayer movement, presence, zones | Sprint 2 (15/03 – 28/03) |
 | Phase 3 – Communication | Chat, Agora video/audio, proximity calls | Sprint 3 (29/03 – 11/04) |
 | Phase 4 – Features & Admin | Events, Library, Forum, Admin, Editor | Sprint 4 (12/04 – 25/04) |
-| Phase 5 – Demo Ready | Testing, polish, docs, demo package | Sprint 5 (26/04 – 03/05) |
+| Phase 5 – Demo Ready | Testing, polish, docs, demo package | Sprint 5 (26/04 – 04/05) |
 
-*Chi tiết: xem plan.md*
+*Details: see plan.md*
 
 
 1️⃣1️⃣ Summary

@@ -399,4 +399,32 @@ erDiagram
 		string name
 		string share_id
 	}
+
 ```
+
+### 7.4 Use Case Descriptions (Detailed Reference)
+
+Detailed use case specifications are maintained in `doc/UseCase_Description.md`. The SRS keeps high-level coverage here and references the detailed operational flows, preconditions, exceptions, and postconditions in that document.
+
+| Use Case ID | Use Case Name                                |
+| :---------- | :------------------------------------------- |
+| UC-01       | Register Account via OTP                     |
+| UC-02       | Register Account via Email and Password      |
+| UC-03       | Log In with Email and Password               |
+| UC-04       | Log In with Google OAuth                     |
+| UC-05       | Manage User Profile                          |
+| UC-06       | Create a Realm                               |
+| UC-07       | Manage Realm Settings                        |
+| UC-08       | Delete a Realm                               |
+| UC-09       | Join a Realm                                 |
+| UC-10       | Move Avatar in Realm                         |
+| UC-11       | Teleport Between Rooms                       |
+| UC-12       | Send Proximity Chat Message                  |
+| UC-13       | Initiate and Respond to Video Call           |
+| UC-14       | Manage Persistent Chat Channels and Messages |
+| UC-15       | Manage Events and RSVP                       |
+| UC-16       | Manage Forum Threads and Posts               |
+| UC-17       | Upload and Browse Resource Library           |
+| UC-18       | Edit Realm Map                               |
+| UC-19       | Admin: Manage Users                          |
+| UC-20       | Admin: View Analytics Dashboard              |
